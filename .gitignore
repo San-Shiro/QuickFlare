@@ -1,0 +1,19 @@
+# Build output
+/build/
+*.exe
+*.msi
+
+# Go
+*.test
+*.out
+
+# Local scratch
+*.log
+/trace.log
+
+# Planning tooling artefacts
+/.planning/
+
+# Internal handoff notes, not part of the published project
+HANDOFF.md
+PORTING.md

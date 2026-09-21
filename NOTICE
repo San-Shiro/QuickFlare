@@ -1,0 +1,9 @@
+QuickFlare
+Copyright 2026 QuickFlare contributors
+
+This product includes software developed as part of the QuickFlare project
+(https://github.com/San-Shiro/QuickFlare).
+
+QuickFlare supervises Cloudflare's `cloudflared` connector as a child
+process. cloudflared is a separate work, distributed by Cloudflare, Inc.
+under the Apache License 2.0, and is not included in this distribution.

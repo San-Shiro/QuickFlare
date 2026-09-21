@@ -1,0 +1,297 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Soft Depth Filters -->
+    <filter id="cloud-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#9A3412" flood-opacity="0.25"/>
+    </filter>
+    
+    <filter id="shield-shadow" x="-25%" y="-20%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#7C2D12" flood-opacity="0.35"/>
+    </filter>
+    
+    <filter id="link-shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="2" dy="8" stdDeviation="8" flood-color="#0F172A" flood-opacity="0.25"/>
+    </filter>
+
+    <filter id="weave-shadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="-4" dy="6" stdDeviation="6" flood-color="#331005" flood-opacity="0.45"/>
+    </filter>
+
+    <!-- Cloud Gradients -->
+    <linearGradient id="cloud-back" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#EA580C"/>
+      <stop offset="50%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#FDBA74"/>
+    </linearGradient>
+
+    <linearGradient id="cloud-main" x1="15%" y1="100%" x2="85%" y2="0%">
+      <stop offset="0%" stop-color="#C2410C"/>
+      <stop offset="35%" stop-color="#EA580C"/>
+      <stop offset="70%" stop-color="#FB923C"/>
+      <stop offset="100%" stop-color="#FDE047"/>
+    </linearGradient>
+
+    <linearGradient id="cloud-highlight" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FEF08A" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#F97316" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Shield Gradients -->
+    <linearGradient id="shield-gold-bevel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFBEB"/>
+      <stop offset="25%" stop-color="#FDE047"/>
+      <stop offset="55%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#C2410C"/>
+    </linearGradient>
+
+    <linearGradient id="shield-rim-shade" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F97316"/>
+      <stop offset="45%" stop-color="#C2410C"/>
+      <stop offset="85%" stop-color="#9A3412"/>
+      <stop offset="100%" stop-color="#7C2D12"/>
+    </linearGradient>
+
+    <radialGradient id="shield-face" cx="45%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="60%" stop-color="#F8FAFC"/>
+      <stop offset="100%" stop-color="#F1F5F9"/>
+    </radialGradient>
+
+    <!-- Orange Link Gradients -->
+    <linearGradient id="orange-body" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#FFA133"/>
+      <stop offset="40%" stop-color="#F6821F"/>
+      <stop offset="85%" stop-color="#EA580C"/>
+      <stop offset="100%" stop-color="#C2410C"/>
+    </linearGradient>
+
+    <linearGradient id="orange-bevel-light" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FEF08A"/>
+      <stop offset="60%" stop-color="#FDBA74"/>
+      <stop offset="100%" stop-color="#FB923C"/>
+    </linearGradient>
+
+    <linearGradient id="orange-bevel-dark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#C2410C"/>
+      <stop offset="100%" stop-color="#7C2D12"/>
+    </linearGradient>
+
+    <!-- Silver / White Link Gradients -->
+    <linearGradient id="silver-body" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="40%" stop-color="#F8FAFC"/>
+      <stop offset="75%" stop-color="#E2E8F0"/>
+      <stop offset="100%" stop-color="#CBD5E1"/>
+    </linearGradient>
+
+    <linearGradient id="silver-bevel-light" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F1F5F9"/>
+    </linearGradient>
+
+    <linearGradient id="silver-bevel-dark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#94A3B8"/>
+      <stop offset="100%" stop-color="#64748B"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ==================== 1. CLOUDFLARE CLOUD (BACKGROUND) ==================== -->
+  <g id="cloud-group" filter="url(#cloud-shadow)">
+    <!-- Back ambient cloud layer -->
+    <path d="M 120 252 
+             C 92 252, 68 232, 64 204 
+             C 58 172, 82 144, 114 138 
+             C 122 112, 145 92, 172 84 
+             C 188 79, 206 79, 224 84 
+             C 246 54, 280 36, 322 36 
+             C 382 36, 432 78, 444 136 
+             C 472 144, 492 168, 492 198 
+             C 492 234, 462 262, 426 262 
+             L 120 262 Z" 
+          fill="url(#cloud-back)" opacity="0.6"/>
+
+    <!-- Main sculpted Cloudflare cloud shape -->
+    <path d="M 100 286 
+             C 66 286, 38 256, 42 222 
+             C 44 190, 70 164, 102 160 
+             C 108 130, 130 104, 160 94 
+             C 178 88, 198 88, 216 93 
+             C 238 64, 274 46, 314 46 
+             C 372 46, 420 86, 430 142 
+             C 452 138, 474 145, 490 162 
+             C 508 182, 514 210, 506 236 
+             C 496 266, 466 286, 432 286 
+             C 418 286, 404 282, 392 274 
+             C 368 296, 336 308, 302 308 
+             L 100 286 Z" 
+          fill="url(#cloud-main)"/>
+
+    <!-- Luminous Cloud Arc Highlights -->
+    <!-- Top central dome highlight -->
+    <path d="M 252 90 
+             C 270 66, 296 54, 322 54 
+             C 368 54, 406 84, 418 128 
+             C 392 110, 360 100, 324 100 
+             C 296 100, 270 108, 248 120 
+             Z" 
+          fill="url(#cloud-highlight)"/>
+
+    <!-- Left shoulder highlight -->
+    <path d="M 94 168 
+             C 104 140, 128 120, 156 110 
+             C 146 128, 144 148, 152 166 
+             C 132 168, 114 178, 102 194 
+             C 96 186, 94 177, 94 168 Z" 
+          fill="#FEF08A" opacity="0.5"/>
+
+    <!-- Trailing speed particles on right -->
+    <circle cx="482" cy="244" r="10" fill="url(#cloud-main)"/>
+    <circle cx="504" cy="250" r="6" fill="#FBA04B"/>
+    <circle cx="518" cy="254" r="3.5" fill="#FED7AA"/>
+
+    <!-- Dynamic swoop tail on right -->
+    <path d="M 416 274 C 456 274, 490 286, 510 298 C 474 298, 436 290, 404 282 Z" 
+          fill="#FB923C" opacity="0.85"/>
+  </g>
+
+  <!-- ==================== 2. SHIELD CREST (MIDDLE LAYER) ==================== -->
+  <g id="shield-group" filter="url(#shield-shadow)">
+    <!-- Outer Shield Bevel Foundation -->
+    <path d="M 256 94 
+             L 410 166 
+             C 418 170, 422 178, 422 188 
+             L 422 296 
+             C 422 356, 354 428, 262 468 
+             C 258 470, 254 470, 250 468 
+             C 158 428, 90 356, 90 296 
+             L 90 188 
+             C 90 178, 94 170, 102 166 
+             Z" 
+          fill="url(#shield-rim-shade)"/>
+
+    <!-- Left & Top Light Bevel Flank -->
+    <path d="M 256 94 
+             L 102 166 
+             C 94 170, 90 178, 90 188 
+             L 90 296 
+             C 90 356, 158 428, 250 468 
+             L 256 454 
+             C 172 416, 110 350, 110 296 
+             L 110 196 
+             L 256 124 
+             Z" 
+          fill="url(#shield-gold-bevel)"/>
+
+    <!-- Golden Highlight Line on Upper Crest -->
+    <path d="M 256 94 L 410 166 L 400 172 L 256 104 L 112 172 L 102 166 Z" 
+          fill="#FFFBEB"/>
+
+    <!-- Shield Face / Clean White Surface -->
+    <path d="M 256 128 
+             L 396 196 
+             C 399 198, 400 201, 400 204 
+             L 400 294 
+             C 400 346, 340 414, 258 452 
+             C 257 453, 255 453, 254 452 
+             C 172 414, 112 346, 112 294 
+             L 112 204 
+             C 112 201, 113 198, 116 196 
+             Z" 
+          fill="url(#shield-face)"/>
+
+    <!-- Subtle inner rim outline -->
+    <path d="M 256 128 L 396 196 L 400 294 C 400 346, 340 414, 256 452 C 172 414, 112 346, 112 294 L 116 196 Z" 
+          fill="none" stroke="#E2E8F0" stroke-width="2"/>
+
+    <!-- Dynamic Speed Flare Strokes along Shield Rim -->
+    <path d="M 106 306 C 124 346, 160 386, 206 420 L 200 427 C 150 390, 114 348, 98 306 Z" 
+          fill="url(#shield-gold-bevel)" opacity="0.85"/>
+    <path d="M 136 356 C 168 394, 210 430, 256 456 L 254 462 C 204 434, 160 396, 128 358 Z" 
+          fill="#FDE047" opacity="0.8"/>
+  </g>
+
+  <!-- ==================== 3. CHUNKY INTERLOCKING LINKS ==================== -->
+  <g id="interlocking-links-layer" transform="translate(256, 280) scale(1.42) translate(-256, -280)">
+    <!-- ====== 3A. SILVER LINK (BASE / UNDERNEATH) ====== -->
+    <!-- Position: (230, 254), Angle: 45 deg -->
+    <g transform="translate(230, 254) rotate(45)" filter="url(#link-shadow)">
+      <!-- Main Link Body -->
+      <path fill-rule="evenodd" 
+            d="M -48 -40 L 48 -40 L 66 -22 L 66 22 L 48 40 L -48 40 L -66 22 L -66 -22 Z M -38 -20 L 38 -20 L 46 -12 L 46 12 L 38 20 L -38 20 L -46 12 L -46 -12 Z" 
+            fill="url(#silver-body)" 
+            stroke="#94A3B8" 
+            stroke-width="3"/>
+
+      <!-- Outer Light Chamfer Highlight -->
+      <path d="M -48 -40 L 48 -40 L 66 -22 L 60 -18 L 44 -34 L -44 -34 L -60 -18 L -66 -22 Z" 
+            fill="url(#silver-bevel-light)"/>
+
+      <!-- Outer Left Chamfer -->
+      <path d="M -66 -22 L -66 22 L -60 16 L -60 -16 Z" 
+            fill="#FFFFFF"/>
+
+      <!-- Outer Dark Chamfer Shadow -->
+      <path d="M -48 40 L 48 40 L 66 22 L 60 18 L 44 34 L -44 34 L -60 18 L -66 22 Z" 
+            fill="url(#silver-bevel-dark)" opacity="0.4"/>
+
+      <!-- Inner Eye Border Accent -->
+      <path d="M -38 -20 L 38 -20 L 46 -12 L 46 12 L 38 20 L -38 20 L -46 12 L -46 -12 Z" fill="none" stroke="#64748B" stroke-width="2"/>
+    </g>
+
+    <!-- ====== 3B. ORANGE LINK (INTERLOCKED) ====== -->
+    <!-- Position: (282, 306), Angle: 45 deg -->
+    <g transform="translate(282, 306) rotate(45)" filter="url(#link-shadow)">
+      <!-- Main Link Body -->
+      <path fill-rule="evenodd" 
+            d="M -48 -40 L 48 -40 L 66 -22 L 66 22 L 48 40 L -48 40 L -66 22 L -66 -22 Z M -38 -20 L 38 -20 L 46 -12 L 46 12 L 38 20 L -38 20 L -46 12 L -46 -12 Z" 
+            fill="url(#orange-body)" 
+            stroke="#C2410C" 
+            stroke-width="3"/>
+
+      <!-- Outer Light Chamfer Highlight -->
+      <path d="M -48 -40 L 48 -40 L 66 -22 L 60 -18 L 44 -34 L -44 -34 L -60 -18 L -66 -22 Z" 
+            fill="url(#orange-bevel-light)"/>
+
+      <!-- Outer Right Chamfer -->
+      <path d="M 66 -22 L 66 22 L 60 16 L 60 -16 Z" 
+            fill="#FEF08A"/>
+
+      <!-- Outer Dark Chamfer Shadow -->
+      <path d="M -48 40 L 48 40 L 66 22 L 60 18 L 44 34 L -44 34 L -60 18 L -66 22 Z" 
+            fill="url(#orange-bevel-dark)"/>
+
+      <!-- Inner Eye Border Accent -->
+      <path d="M -38 -20 L 38 -20 L 46 -12 L 46 12 L 38 20 L -38 20 L -46 12 L -46 -12 Z" fill="none" stroke="#7C2D12" stroke-width="2"/>
+    </g>
+
+    <!-- ====== 3C. WEAVE: SILVER LINK TOP ARM OVER ORANGE LINK ====== -->
+    <!-- Drawn in front of the orange link with a realistic drop-shadow -->
+    <g transform="translate(230, 254) rotate(45)" filter="url(#weave-shadow)">
+      <path d="M -48 -40 L 48 -40 L 66 -22 L 66 -4 L 46 -4 L 38 -20 L -38 -20 L -46 -4 L -66 -4 L -66 -22 Z" 
+            fill="url(#silver-body)" 
+            stroke="#94A3B8" 
+            stroke-width="2.5"/>
+
+      <!-- Highlight on top edge of weave -->
+      <path d="M -48 -40 L 48 -40 L 66 -22 L 60 -18 L 44 -34 L -44 -34 L -60 -18 L -66 -22 Z" 
+            fill="#FFFFFF"/>
+    </g>
+  </g>
+
+  <!-- ==================== 4. GLOSS & HIGH-TECH FLARE ==================== -->
+  <g id="gloss-overlay" pointer-events="none">
+    <!-- Diagonal Glass Sheen Across Upper Shield -->
+    <path d="M 256 130 
+             L 394 198 
+             C 350 258, 246 304, 114 274 
+             L 114 205 
+             Z" 
+          fill="#FFFFFF" 
+          opacity="0.18"/>
+
+    <!-- Central High-Tech Connection Sparkle -->
+    <circle cx="256" cy="280" r="3.5" fill="#FFFFFF" opacity="0.95"/>
+    <path d="M 256 268 L 256 292 M 244 280 L 268 280" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" opacity="0.75"/>
+    <circle cx="256" cy="280" r="7" fill="none" stroke="#FFFFFF" stroke-width="1" opacity="0.4"/>
+  </g>
+</svg>

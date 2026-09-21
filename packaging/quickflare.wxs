@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  QuickFlare MSI.
+
+  Deliberately a per-user install (InstallScope="perUser"): QuickFlare is a
+  tray app that manages one person's Cloudflare account and stores its token
+  under that user's profile, so it has no reason to require administrator
+  rights or to install machine-wide.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="QuickFlare"
+           Manufacturer="QuickFlare contributors"
+           Version="$(var.Version)"
+           UpgradeCode="7E2F1C84-3A6B-4E31-9E4D-2B7C5A9F1D60"
+           Scope="perUser"
+           Compressed="yes">
+
+    <!--
+      AllowSameVersionUpgrades is not optional here. WiX mints a fresh
+      ProductCode on every build, and MajorUpgrade only removes versions
+      LOWER than the one being installed - so reinstalling the same version
+      registered a second product rather than replacing the first. Three
+      QuickFlare entries stacked up in Add/Remove Programs on one machine
+      that way, each pointing at the same install folder.
+
+      The documented hazard - two copies installed at once - needs an
+      identical ProductCode as well as an identical version, which cannot
+      happen while the ProductCode is regenerated per build.
+    -->
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="A newer version of QuickFlare is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="QuickFlareIcon" SourceFile="assets\quickflare.ico" />
+    <Property Id="ARPPRODUCTICON" Value="QuickFlareIcon" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/San-Shiro/QuickFlare" />
+
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="INSTALLFOLDER" Name="QuickFlare">
+        <!--
+          Declared so uninstall can clean it out. Nothing is installed here:
+          QuickFlare extracts cloudflared into it at runtime, which means the
+          installer has no record of the file and would otherwise leave 52 MB
+          behind on uninstall.
+        -->
+        <Directory Id="BinFolder" Name="bin" />
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="AppShortcutFolder" Name="QuickFlare" />
+    </StandardDirectory>
+
+    <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER">
+      <Component Id="QuickFlareExe" Guid="B41D9A7C-5E82-4F19-8C3A-6D0E4B2A8F57">
+        <File Id="QuickFlareExeFile"
+              Source="build\QuickFlare.exe"
+              Name="QuickFlare.exe"
+              KeyPath="yes" />
+      </Component>
+      <!--
+        cloudflared is NOT a file in this package. It is embedded in
+        QuickFlare.exe (gzipped, under internal/supervisor/assets) and
+        extracted on first use into the app's own data directory.
+
+        Shipping it here as well put two copies in the installer - and made
+        the embedded one dead weight, because FindBinary looks next to the
+        running executable first. The MSI copy always won, so the 18.7 MB
+        carried inside every QuickFlare.exe was never read. One source, one
+        code path, and the same behaviour as the portable build.
+      -->
+      <Component Id="AppShortcut" Guid="C52EAB8D-6F93-4A2B-9D4E-7E1F5C3B9A68"
+                 Directory="AppShortcutFolder">
+        <Shortcut Id="StartMenuShortcut"
+                  Name="QuickFlare"
+                  Description="Publish localhost through Cloudflare Tunnel"
+                  Target="[INSTALLFOLDER]QuickFlare.exe"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="QuickFlareIcon" />
+        <RemoveFolder Id="RemoveAppShortcutFolder" Directory="AppShortcutFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\QuickFlare"
+                       Name="installed" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+
+      <!--
+        App Paths makes the name runnable on its own: Win+R, "quickflare",
+        Enter. Without it the Run dialog only resolves things already on PATH,
+        and a per-user install deliberately does not touch PATH.
+      -->
+      <Component Id="AppPathsEntry" Guid="D63FB9AE-7A04-4B3C-8E5F-9F2A6D4C0B79"
+                 Directory="INSTALLFOLDER">
+        <RegistryKey Root="HKCU" Key="Software\Microsoft\Windows\CurrentVersion\App Paths\QuickFlare.exe">
+          <RegistryValue Type="string" Value="[INSTALLFOLDER]QuickFlare.exe" KeyPath="yes" />
+          <RegistryValue Name="Path" Type="string" Value="[INSTALLFOLDER]" />
+        </RegistryKey>
+      </Component>
+
+      <!--
+        Uninstall cleanup for the extracted engine. RemoveFile is the only way
+        to reach a file the package did not install - Windows Installer tracks
+        what it wrote, and the extracted cloudflared was written by the app.
+        Without this an uninstall leaves the largest file on disk behind, and
+        the install directory with it.
+      -->
+      <Component Id="CleanupEngine" Guid="F1A7C264-9D38-4E05-B6C2-3A8E7D51940B"
+                 Directory="BinFolder">
+        <RemoveFile Id="RemoveExtractedCloudflared" Name="cloudflared.exe" On="uninstall" />
+        <RemoveFolder Id="RemoveBinFolder" On="uninstall" />
+        <!-- And the install folder itself, once bin has gone from inside it. -->
+        <RemoveFolder Id="RemoveInstallFolder" Directory="INSTALLFOLDER" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\QuickFlare"
+                       Name="engine" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <Feature Id="Main" Title="QuickFlare" Level="1">
+      <ComponentGroupRef Id="AppFiles" />
+    </Feature>
+  </Package>
+</Wix>
