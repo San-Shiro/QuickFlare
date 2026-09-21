@@ -3,6 +3,12 @@
 *.exe
 *.msi
 
+# Cross-compiled binaries have no extension, so *.exe does not catch them.
+# "go build ./cmd/quickflare-cli" with no -o drops one here, and a 9 MB
+# binary once reached a commit that way.
+/quickflare
+/quickflare-cli
+
 # Go
 *.test
 *.out
