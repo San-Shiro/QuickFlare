@@ -36,6 +36,7 @@ usage: quickflare <command> [flags]
   route rm <host>     unpublish a route
   quick               a temporary trycloudflare.com link, no account needed
   run                 run the tunnel connector in the foreground
+  service             install the connector as a systemd user service (Linux)
   status              token, domain, connector and route state
   reconcile           re-check stored routes against Cloudflare
 
@@ -68,6 +69,8 @@ func main() {
 		err = cmdQuick(ctx, args)
 	case "run":
 		err = cmdRun(ctx, args)
+	case "service":
+		err = cmdService(ctx, args)
 	case "status":
 		err = cmdStatus(ctx, args)
 	case "reconcile":
