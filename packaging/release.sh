@@ -16,9 +16,18 @@ VERSION="${TAG#v}"
 # package carries the numeric part; the tag carries the full story.
 MSI_VERSION="${VERSION%%-*}"
 
+# A suffixed tag is published as a pre-release by default. Set PRERELEASE=0 to
+# override: GitHub refuses to mark a pre-release "Latest" (HTTP 422, "Latest
+# release cannot be draft or prerelease"), so clearing the flag is the only
+# way to give a -dev or -rc tag the headline slot. A pre-release still appears
+# on the releases page either way; it is only the Latest banner that differs.
+# Read the override before clobbering the variable it shares a name with.
+WANT_PRERELEASE="${PRERELEASE:-1}"
 PRERELEASE=""
-if [ "$VERSION" != "$MSI_VERSION" ]; then
+LATEST="--latest"
+if [ "$VERSION" != "$MSI_VERSION" ] && [ "$WANT_PRERELEASE" != "0" ]; then
     PRERELEASE="--prerelease"
+    LATEST=""
     echo "==> $TAG is a pre-release (package version $MSI_VERSION)"
 fi
 
@@ -55,21 +64,34 @@ echo "==> Creating repository $OWNER/$REPO (skipped if it exists)"
 
 git push origin "$TAG"
 
+# The body is this version's section of the changelog, not the whole file.
+# Publishing the entire history as one release body buries what changed here
+# under everything that came before it.
+NOTES="build/release-notes.md"
+awk -v tag="$TAG" '
+  /^## / { if (found) exit; if ($2 == tag) found = 1 }
+  found
+' CHANGELOG.md > "$NOTES"
+if [ ! -s "$NOTES" ]; then
+    echo "    no '## $TAG' section in CHANGELOG.md; using the whole file"
+    cp CHANGELOG.md "$NOTES"
+fi
+
 echo "==> Publishing release $TAG"
 "$GH" release create "$TAG" \
   --repo "$OWNER/$REPO" \
   --title "QuickFlare $TAG" \
-  --notes-file CHANGELOG.md \
-  $PRERELEASE \
-  "build/QuickFlare-$MSI_VERSION-x64.msi#Windows installer (per-user, no admin)" \
-  "build/QuickFlare-$MSI_VERSION.exe#Windows portable" \
-  "build/quickflare_${MSI_VERSION}_amd64.deb#Debian/Ubuntu amd64" \
-  "build/quickflare_${MSI_VERSION}_arm64.deb#Debian/Ubuntu arm64" \
-  "build/quickflare-${MSI_VERSION}-1.x86_64.rpm#Fedora/RHEL x86_64" \
-  "build/quickflare-${MSI_VERSION}-1.aarch64.rpm#Fedora/RHEL aarch64" \
-  "build/quickflare-${MSI_VERSION}-linux-amd64.tar.gz#Linux amd64 tarball" \
-  "build/quickflare-${MSI_VERSION}-linux-arm64.tar.gz#Linux arm64 tarball" \
-  "build/quickflare-${MSI_VERSION}-linux-amd64#Linux amd64 binary (chmod +x)" \
-  "build/quickflare-${MSI_VERSION}-linux-arm64#Linux arm64 binary (chmod +x)"
+  --notes-file "$NOTES" \
+  $PRERELEASE $LATEST \
+  "build/QuickFlare-$MSI_VERSION-x64.msi#QuickFlare-$MSI_VERSION-Windows-x64-Installer" \
+  "build/QuickFlare-$MSI_VERSION.exe#QuickFlare-$MSI_VERSION-Windows-Portable" \
+  "build/quickflare_${MSI_VERSION}_amd64.deb#QuickFlare-$MSI_VERSION-Debian-Ubuntu-amd64" \
+  "build/quickflare_${MSI_VERSION}_arm64.deb#QuickFlare-$MSI_VERSION-Debian-Ubuntu-arm64" \
+  "build/quickflare-${MSI_VERSION}-1.x86_64.rpm#QuickFlare-$MSI_VERSION-Fedora-RHEL-x86_64" \
+  "build/quickflare-${MSI_VERSION}-1.aarch64.rpm#QuickFlare-$MSI_VERSION-Fedora-RHEL-aarch64" \
+  "build/quickflare-${MSI_VERSION}-linux-amd64.tar.gz#QuickFlare-$MSI_VERSION-Linux-amd64-tarball" \
+  "build/quickflare-${MSI_VERSION}-linux-arm64.tar.gz#QuickFlare-$MSI_VERSION-Linux-arm64-tarball" \
+  "build/quickflare-${MSI_VERSION}-linux-amd64#QuickFlare-$MSI_VERSION-Linux-amd64" \
+  "build/quickflare-${MSI_VERSION}-linux-arm64#QuickFlare-$MSI_VERSION-Linux-arm64"
 
 echo "==> Done: https://github.com/$OWNER/$REPO/releases/tag/$TAG"
