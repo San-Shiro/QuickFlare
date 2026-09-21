@@ -337,4 +337,3 @@ func EngineVersion(binPath string) string {
 	}
 	return EmbeddedCloudflaredVersion
 }
-

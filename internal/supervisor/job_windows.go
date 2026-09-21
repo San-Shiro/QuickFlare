@@ -97,3 +97,6 @@ func superviseProcess(pid int) {
 		dbgJob("AssignProcessToJobObject(%d): %v", pid, err)
 	}
 }
+
+// killGroup has no Windows meaning: the job object already owns the whole
+// tree, and closing it takes every descendant with it.
