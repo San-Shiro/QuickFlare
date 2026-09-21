@@ -7,7 +7,7 @@
 **Publish localhost to the internet through Cloudflare Tunnel with cloudflared.**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/badge/release-v0.3.0-F6821F.svg)](https://github.com/San-Shiro/QuickFlare/releases)
+[![Release](https://img.shields.io/badge/release-v0.3.1-F6821F.svg)](https://github.com/San-Shiro/QuickFlare/releases)
 
 </div>
 
@@ -22,12 +22,26 @@ connection to Cloudflare.
 
 ## Install
 
-Grab either file from [Releases](https://github.com/San-Shiro/QuickFlare/releases):
+From [Releases](https://github.com/San-Shiro/QuickFlare/releases):
 
-- **`QuickFlare-0.3.0-x64.msi`** — Windows Installer, per-user, no admin
-- **`QuickFlare-0.3.0.exe`** — Portable executable, zero setup
+**Windows** — tray app, with the `cloudflared` engine bundled inside it, so
+there is nothing else to install.
 
-QuickFlare bundles the `cloudflared` tunnel engine directly inside the app, so zero external installation or dependencies are required.
+| File | |
+|---|---|
+| `QuickFlare-0.3.1-x64.msi` | Installer, per-user, no admin |
+| `QuickFlare-0.3.1.exe` | Portable, zero setup |
+
+**Linux** — command line only, and currently a preview. See
+[Linux](#linux-preview) below.
+
+| File | |
+|---|---|
+| `quickflare_0.3.1_amd64.deb` | Debian, Ubuntu, Mint |
+| `quickflare-0.3.1.x86_64.rpm` | Fedora, RHEL, openSUSE |
+| `quickflare-0.3.1-linux-amd64.tar.gz` | Any distribution |
+
+`arm64` builds of each are published alongside.
 
 ## Quick Start
 
@@ -37,6 +51,31 @@ Left-click the QuickFlare tray icon to open the panel:
 - **Custom Domains**: Paste a scoped Cloudflare API token, choose your domain, and add a subdomain and local port (`dev` + `3000` → `dev.example.com`). QuickFlare automatically provisions the tunnel, creates the DNS CNAME record, and routes traffic.
 
 See the dedicated [Cloudflare API Token Guide](docs/CLOUDFLARE_API_TOKEN.md) for step-by-step instructions on generating your token.
+
+## Linux (preview)
+
+The Linux build is a **command-line tool**, not the tray app, and it is
+published as a pre-release. It does what the tray does - quick tunnels, routes
+on your own domain, reconciliation - from a terminal:
+
+```bash
+quickflare login
+quickflare route add app --port 3000
+quickflare service install
+```
+
+`quickflare service install` writes a systemd user unit so routes survive
+logout and restart on failure, rather than needing a terminal held open.
+
+Two things to know before using it:
+
+- **`cloudflared` is not bundled on Linux.** Distribution packages should not
+  ship a second copy of a binary the package manager can supply. Install it
+  from Cloudflare's repository; the packages recommend it.
+- **Your API token is stored in plain text**, in a file readable only by you.
+  Windows encrypts it with DPAPI; the Linux keystore integration is not
+  written yet, and `quickflare status` says so plainly. That is the main
+  reason this is a preview.
 
 ## Documentation
 
@@ -50,9 +89,10 @@ See the dedicated [Cloudflare API Token Guide](docs/CLOUDFLARE_API_TOKEN.md) for
 - **Routes are public.** QuickFlare publishes the hostname and nothing else —
   it adds no login. Anything you put behind a route should do its own
   authentication, or not be published at all.
-- **Windows only** right now.
-- Your API token is encrypted with Windows DPAPI, tied to your Windows account.
-  It's stored in `%APPDATA%\QuickFlare\config.json` and never in plaintext.
+- **The tray app is Windows only.** Linux has the command line tool above; macOS has neither yet.
+- On Windows your API token is encrypted with Windows DPAPI, tied to your
+  Windows account, and stored in `%APPDATA%\QuickFlare\config.json`. On Linux
+  it is **not** encrypted yet - see the preview note above.
 - Subdomains are one level deep (`app.example.com`, not `app.dev.example.com`)
   — the free Cloudflare certificate doesn't cover deeper names.
 - One DNS record per route. QuickFlare doesn't touch `*.yourdomain`, so a
@@ -60,16 +100,22 @@ See the dedicated [Cloudflare API Token Guide](docs/CLOUDFLARE_API_TOKEN.md) for
 - On launch it checks your routes against Cloudflare, restores the ones still
   there, and drops the ones that aren't.
 - The binary isn't signed, so Windows will warn you the first time.
-- `cloudflared` is bundled directly inside QuickFlare — no separate installation required.
+- `cloudflared` is bundled inside the Windows build. The Linux packages recommend it instead of shipping their own copy.
 
 ## Build
 
 ```bash
-go build -ldflags "-H windowsgui -s -w" -o build/QuickFlare-0.3.0.exe ./cmd/quickflare
+# Windows tray app
+go build -ldflags "-H windowsgui -s -w" -o build/QuickFlare-0.3.1.exe ./cmd/quickflare
+
+# Linux CLI - cross-compiles from anywhere, no cgo
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o build/quickflare ./cmd/quickflare-cli
+
 go test ./...
 ```
 
-Go 1.26+, no cgo.
+Go 1.26+. The CLI needs no cgo; the tray app needs it only on Linux, which is
+why the two are separate binaries.
 
 ## Licence
 
