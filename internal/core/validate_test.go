@@ -1,12 +1,12 @@
-package ui
+package core
 
 import "testing"
 
 func TestValidateLabel(t *testing.T) {
 	valid := []string{"app", "api2", "my-service", "a", "staging-01"}
 	for _, l := range valid {
-		if err := validateLabel(l); err != nil {
-			t.Errorf("validateLabel(%q) rejected a legal label: %v", l, err)
+		if err := ValidateLabel(l); err != nil {
+			t.Errorf("ValidateLabel(%q) rejected a legal label: %v", l, err)
 		}
 	}
 
@@ -22,8 +22,8 @@ func TestValidateLabel(t *testing.T) {
 	}
 	for name, l := range invalid {
 		t.Run(name, func(t *testing.T) {
-			if err := validateLabel(l); err == nil {
-				t.Errorf("validateLabel(%q) accepted an illegal label", l)
+			if err := ValidateLabel(l); err == nil {
+				t.Errorf("ValidateLabel(%q) accepted an illegal label", l)
 			}
 		})
 	}
@@ -33,7 +33,7 @@ func TestValidateLabel(t *testing.T) {
 		for i := range long {
 			long[i] = 'a'
 		}
-		if err := validateLabel(string(long)); err == nil {
+		if err := ValidateLabel(string(long)); err == nil {
 			t.Error("accepted a label over 63 characters")
 		}
 	})
@@ -42,7 +42,7 @@ func TestValidateLabel(t *testing.T) {
 // A wildcard would hand the entire zone to this tunnel - the exact behaviour
 // the per-route design moved away from. It must not be reachable from a form.
 func TestValidateLabelRejectsWildcardExplicitly(t *testing.T) {
-	err := validateLabel("*")
+	err := ValidateLabel("*")
 	if err == nil {
 		t.Fatal("wildcard label must be rejected")
 	}

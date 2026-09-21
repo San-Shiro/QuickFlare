@@ -4,33 +4,17 @@ import (
 	"context"
 	"image/color"
 	"strconv"
-	"strings"
 	"time"
 
-	"github.com/San-Shiro/QuickFlare/internal/cloudflare"
+	"github.com/San-Shiro/QuickFlare/internal/core"
 )
 
-// Reconciliation: making the list match what Cloudflare actually has.
+// Reconciliation, as the panel sees it.
 //
-// The stored route list is a cache. The real state lives in two places on
-// Cloudflare - a DNS record per hostname, and the tunnel's ingress list - and
-// either can change without this app running: a record deleted in the
-// dashboard, a route added from another machine, a tunnel rebuilt. Trusting
-// the local file would show routes that no longer serve anything, and hide
-// ones that do.
-//
-// So on launch every stored route is re-checked, and anything the tunnel is
-// serving that the file has never heard of is adopted. That last part is what
-// stops orphans accumulating: before this, a route outlived a restart on
-// Cloudflare while vanishing from the UI, leaving DNS records and ingress
-// rules nobody could see or clean up.
-
-// reconcileState is what one hostname looks like on Cloudflare.
-type reconcileState struct {
-	inDNS     bool
-	inIngress bool
-	target    string // local target, as the ingress rule has it
-}
+// The rules - what counts as present, what gets dropped, what gets adopted -
+// are core.ReconcileList, shared with the CLI and tested there. What is left
+// here is fetching off the Gio loop, turning core routes back into list rows,
+// and saying what happened in one line of footer.
 
 // reconcileRoutes rebuilds the route list from Cloudflare and heals anything
 // half-published.
@@ -40,7 +24,10 @@ func (p *Panel) reconcileRoutes() {
 		return
 	}
 
-	stored := append([]Route(nil), p.routes...)
+	stored := make([]core.Route, 0, len(p.routes))
+	for _, r := range p.routes {
+		stored = append(stored, r.Route)
+	}
 	tunnelID := p.tunnelID
 	zoneID := p.currentZoneID()
 
@@ -50,52 +37,12 @@ func (p *Panel) reconcileRoutes() {
 		ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 		defer cancel()
 
-		// One call gives every hostname the tunnel serves, and the local
-		// port each points at - enough to adopt routes this machine has
-		// never seen.
-		doc, err := client.TunnelConfig(ctx, tunnelID)
+		states, err := core.FetchStates(ctx, client, tunnelID, zoneID, stored)
 		if err != nil {
 			p.dispatch(func() {
 				p.setStatus("Could not read tunnel config: "+err.Error(), colError)
 			})
 			return
-		}
-
-		states := map[string]*reconcileState{}
-		for _, rule := range doc.Ingress {
-			if rule.Hostname == "" {
-				continue // the catch-all
-			}
-			host := strings.ToLower(rule.Hostname)
-			states[host] = &reconcileState{
-				inIngress: true,
-				target:    strings.TrimPrefix(rule.Service, "http://"),
-			}
-		}
-
-		// DNS is checked per stored route: a hostname with no record no
-		// longer resolves, however healthy its ingress rule looks.
-		target := cloudflare.TunnelCNAMETarget(tunnelID)
-		for _, r := range stored {
-			host := strings.ToLower(r.Hostname)
-			if states[host] == nil {
-				states[host] = &reconcileState{}
-			}
-			zone := r.ZoneID
-			if zone == "" {
-				zone = zoneID
-			}
-			if zone == "" {
-				continue
-			}
-			rec, err := client.FindDNSRecord(ctx, zone, "CNAME", r.Hostname)
-			if err != nil {
-				// Treat a lookup failure as "unknown, leave alone" rather
-				// than deleting a route because the network blipped.
-				states[host].inDNS = true
-				continue
-			}
-			states[host].inDNS = rec != nil && rec.Content == target
 		}
 
 		p.dispatch(func() {
@@ -104,66 +51,20 @@ func (p *Panel) reconcileRoutes() {
 	}()
 }
 
-// reconcileList is the decision half: given what is stored and what
-// Cloudflare actually has, work out the new route list.
-//
-// Kept separate from acting on it so the rules below are testable on their
-// own - the branch that deletes a user's routes should not require a live
-// Cloudflare account to exercise.
-func reconcileList(stored []Route, states map[string]*reconcileState, defaultZone string) (kept []Route, dropped, adopted []string) {
-	byHost := map[string]Route{}
-	for _, r := range stored {
-		byHost[strings.ToLower(r.Hostname)] = r
-	}
-
-	for host, st := range states {
-		known, isKnown := byHost[host]
-
-		// Neither half present: the route is gone from Cloudflare, so it
-		// goes from the list too rather than sitting there pretending.
-		if !st.inDNS && !st.inIngress {
-			if isKnown {
-				dropped = append(dropped, known.Hostname)
-			}
-			continue
-		}
-
-		r := known
-		if !isKnown {
-			// Serving on Cloudflare but absent here - adopt it, using the
-			// port the ingress rule already names.
-			r = Route{Hostname: host, Target: st.target, ZoneID: defaultZone}
-			adopted = append(adopted, host)
-		}
-		if r.Target == "" {
-			r.Target = st.target
-		}
-		if r.ZoneID == "" {
-			r.ZoneID = defaultZone
-		}
-
-		if st.inDNS && st.inIngress {
-			r.Status, r.Detail = statusConnected, ""
-		} else {
-			// Half-published: one side survived. Republishing restores the
-			// missing half instead of leaving a route that resolves nowhere
-			// or a rule nothing points at.
-			r.Status, r.Detail = statusStarting, "restoring..."
-		}
-		kept = append(kept, r)
-	}
-	return kept, dropped, adopted
-}
-
 // applyReconcile installs the reconciled list and republishes what is only
 // half there.
-func (p *Panel) applyReconcile(stored []Route, states map[string]*reconcileState, defaultZone string) {
-	kept, dropped, adopted := reconcileList(stored, states, defaultZone)
-	p.routes = kept
+func (p *Panel) applyReconcile(stored []core.Route, states map[string]*core.State, defaultZone string) {
+	kept, dropped, adopted := core.ReconcileList(stored, states, defaultZone)
+
+	rows := make([]Route, 0, len(kept))
+	for _, r := range kept {
+		rows = append(rows, Route{Route: r})
+	}
+	p.routes = rows
 
 	// Collected before provisioning: provisionRoute rewrites Status, so
 	// deciding from it mid-loop would act on what the loop just changed.
-	var repair []Route
+	var repair []core.Route
 	for _, r := range kept {
 		if r.Status == statusStarting {
 			repair = append(repair, r)

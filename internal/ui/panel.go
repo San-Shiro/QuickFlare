@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"image/color"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -23,6 +22,7 @@ import (
 	"github.com/San-Shiro/QuickFlare/internal/autostart"
 	"github.com/San-Shiro/QuickFlare/internal/cloudflare"
 	"github.com/San-Shiro/QuickFlare/internal/config"
+	"github.com/San-Shiro/QuickFlare/internal/core"
 	"github.com/San-Shiro/QuickFlare/internal/supervisor"
 )
 
@@ -44,17 +44,22 @@ const (
 	modeQuick   = 1
 )
 
-// connStatus drives the colour of a pill's status dot.
-type connStatus int
+// connStatus is core.Status under the name this package has always used for
+// it. Aliased rather than redeclared so there is exactly one set of status
+// values across the tray app, the CLI and the tests.
+type connStatus = core.Status
 
 const (
-	statusIdle connStatus = iota
-	statusStarting
-	statusConnected
-	statusError
+	statusIdle      = core.StatusIdle
+	statusStarting  = core.StatusStarting
+	statusConnected = core.StatusConnected
+	statusError     = core.StatusError
 )
 
-func (s connStatus) color() color.NRGBA {
+// statusColor maps a status to its dot colour. A free function, not a method:
+// connStatus is an alias for a type in another package, and methods can only
+// be defined where the type is.
+func statusColor(s connStatus) color.NRGBA {
 	switch s {
 	case statusConnected:
 		return colSuccess
@@ -66,18 +71,13 @@ func (s connStatus) color() color.NRGBA {
 	return colTextDisabled
 }
 
-// Route is one published hostname on the user's own domain.
+// Route is a core.Route plus the widget state one list row needs.
+//
+// The domain fields are embedded rather than copied, so r.Hostname and
+// r.Status still read the same at every call site while there is only one
+// definition of what a route is.
 type Route struct {
-	Hostname string
-	Target   string
-	Status   connStatus
-	Detail   string // overrides Target when set, e.g. "port 4000 refused"
-
-	// ZoneID is the zone this route was published into. Carried on the route
-	// rather than read from the picker at deletion time: the list shows
-	// routes from every zone, so a user who switches domains and then
-	// deletes would otherwise have the delete aimed at the wrong zone.
-	ZoneID string
+	core.Route
 
 	copyBtn  widget.Clickable
 	stopBtn  widget.Clickable
@@ -384,13 +384,13 @@ func (p *Panel) restore() {
 	// the network catches up - but mark every row unverified, because
 	// nothing here has been checked against Cloudflare yet.
 	for _, sr := range cfg.Routes {
-		p.routes = append(p.routes, Route{
+		p.routes = append(p.routes, Route{Route: core.Route{
 			Hostname: sr.Hostname,
 			Target:   sr.Target,
 			ZoneID:   sr.ZoneID,
 			Status:   statusIdle,
 			Detail:   "checking...",
-		})
+		}})
 	}
 
 	if cfg.APIToken == "" {
@@ -1042,12 +1042,12 @@ func (p *Panel) buildRoute() (Route, bool) {
 		return Route{}, false
 	}
 
-	return Route{
+	return Route{Route: core.Route{
 		Hostname: hostname,
 		Target:   "localhost:" + port,
 		Status:   statusStarting,
 		ZoneID:   p.currentZoneID(),
-	}, true
+	}}, true
 }
 
 // deleteRoute tears the route down on Cloudflare and drops it from the list.
@@ -1219,49 +1219,11 @@ func (p *Panel) Shutdown() {
 	})
 }
 
-func parsePort(s string) (int, error) {
-	n, err := strconv.Atoi(s)
-	if err != nil || n < 1 || n > 65535 {
-		return 0, errPort
-	}
-	return n, nil
-}
+// parsePort and validateLabel forward to core so the CLI and the panel
+// reject exactly the same input.
+func parsePort(s string) (int, error) { return core.ParsePort(s) }
 
-// validateLabel checks a subdomain is a single, legal DNS label.
-//
-// The dot rule is about TLS: the free Universal certificate covers *.domain
-// but not *.a.domain, so a two-label name fails in the browser. The rest is
-// about not sending junk to the API - and specifically about "*", which
-// would publish a wildcard record and hand the entire zone to this tunnel.
-// That is the behaviour QuickFlare deliberately moved away from, so it must not
-// be reachable by typing one character into a form.
-func validateLabel(label string) error {
-	switch {
-	case label == "*":
-		return fmt.Errorf("a wildcard would take over the whole domain - use a name")
-	case strings.Contains(label, "."):
-		return fmt.Errorf("subdomain must be a single label")
-	case len(label) > 63:
-		return fmt.Errorf("subdomain is too long (max 63 characters)")
-	case strings.HasPrefix(label, "-") || strings.HasSuffix(label, "-"):
-		return fmt.Errorf("subdomain cannot start or end with a hyphen")
-	}
-	for _, r := range label {
-		isLower := r >= 'a' && r <= 'z'
-		isUpper := r >= 'A' && r <= 'Z'
-		isDigit := r >= '0' && r <= '9'
-		if !isLower && !isUpper && !isDigit && r != '-' {
-			return fmt.Errorf("subdomain can only use letters, numbers and hyphens")
-		}
-	}
-	return nil
-}
-
-type portError struct{}
-
-func (portError) Error() string { return "Port must be a number between 1 and 65535" }
-
-var errPort = portError{}
+func validateLabel(label string) error { return core.ValidateLabel(label) }
 
 // statusText is the footer message, falling back to a summary of the session.
 func (p *Panel) statusText() string {

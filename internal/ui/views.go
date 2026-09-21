@@ -749,7 +749,7 @@ func (p *Panel) pill(gtx layout.Context, d pillData) layout.Dimensions {
 
 			return layout.Inset{Left: unit.Dp(sp6), Right: unit.Dp(sp4)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
-					layout.Rigid(statusDot(d.status.color(), dimDot)),
+					layout.Rigid(statusDot(statusColor(d.status), dimDot)),
 					layout.Rigid(hgap(sp5)),
 					layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 						// vcenterLeft wraps the whole column, not the labels
