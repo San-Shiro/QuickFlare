@@ -77,3 +77,35 @@ Click the gear icon in the top right to open **Settings**:
 - **API Token**: Update or verify your Cloudflare API token at any time.
 - **Start with Windows**: Toggle automatic launch on Windows login (per-user, no admin prompt).
 - **Engine & Version**: View the active Cloudflare tunnel engine version, QuickFlare version, and binary status.
+
+---
+
+## 4. Command-Line Interface (CLI)
+
+QuickFlare includes a full command-line interface (`quickflare`) automatically registered in your user `PATH`. You can control QuickFlare directly from `cmd.exe`, PowerShell, or Windows Terminal:
+
+```cmd
+:: Start or stop the QuickFlare tray application
+quickflare start
+quickflare stop
+
+:: Pause or resume route forwarding (client-side toggle)
+quickflare pause
+quickflare resume
+
+:: Inspect runtime status, token, and routes
+quickflare status
+quickflare route ls
+
+:: Publish or remove routes directly from the terminal
+quickflare route add app --port 3000
+quickflare route rm app.yourdomain.com
+
+:: Ephemeral trycloudflare tunnel (no account needed)
+quickflare quick --port 8080
+
+:: Check or install PATH registration
+quickflare path status
+quickflare path install
+```
+Changes made via the CLI automatically synchronize in real time with the running tray UI.

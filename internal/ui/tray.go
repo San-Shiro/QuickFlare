@@ -8,6 +8,7 @@ import (
 	"gioui.org/app"
 
 	"github.com/San-Shiro/QuickFlare/internal/autostart"
+	"github.com/San-Shiro/QuickFlare/internal/ipc"
 )
 
 //go:embed assets/tray.ico
@@ -24,11 +25,49 @@ var trayIconDisabled []byte
 func Run() {
 	p := NewPanel()
 
-	go systray.Run(func() { onReady(p) }, func() { onExit(p) })
+	ipcServer, _ := ipc.StartServer(ipc.Handlers{
+		OnQuit: func() {
+			p.Shutdown()
+			systray.Quit()
+			os.Exit(0)
+		},
+		OnPause: func() error {
+			p.SetDisabled(true)
+			return nil
+		},
+		OnResume: func() error {
+			p.SetDisabled(false)
+			return nil
+		},
+		OnReload: func() error {
+			p.ReloadFromDisk()
+			return nil
+		},
+		OnOpen: func() error {
+			p.Open()
+			return nil
+		},
+		OnStatus: func() ipc.StatusData {
+			return p.StatusData()
+		},
+	})
+	if ipcServer != nil {
+		defer ipcServer.Close()
+	}
+
+	go systray.Run(func() { onReady(p) }, func() {
+		if ipcServer != nil {
+			_ = ipcServer.Close()
+		}
+		onExit(p)
+	})
 
 	go func() {
 		err := p.Loop()
 		p.Shutdown()
+		if ipcServer != nil {
+			_ = ipcServer.Close()
+		}
 		if err != nil {
 			os.Exit(1)
 		}

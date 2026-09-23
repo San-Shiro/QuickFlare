@@ -35,8 +35,10 @@ GH="$(find "$LOCALAPPDATA/Microsoft/WinGet" -name gh.exe 2>/dev/null | head -1)"
 [ -n "$GH" ] || GH=gh
 
 echo "==> Building Windows artefacts for $TAG"
-go build -ldflags "-H windowsgui -s -w" -o "build/QuickFlare-$MSI_VERSION.exe" ./cmd/quickflare
-cp -f "build/QuickFlare-$MSI_VERSION.exe" "build/QuickFlare.exe"
+go build -ldflags "-H windowsgui -s -w" -o "build/quickflare-tray.exe" ./cmd/quickflare
+go build -ldflags "-s -w" -o "build/quickflare.exe" ./cmd/quickflare-cli
+cp -f "build/quickflare-tray.exe" "build/QuickFlare-$MSI_VERSION.exe"
+cp -f "build/quickflare.exe" "build/quickflare-$MSI_VERSION-windows-amd64.exe"
 
 # -arch x64 is not optional. Without it WiX declares the package Intel (x86)
 # while it ships an amd64 binary, and Windows then registers the product in

@@ -14,6 +14,7 @@ import (
 	"github.com/San-Shiro/QuickFlare/internal/cloudflare"
 	"github.com/San-Shiro/QuickFlare/internal/config"
 	"github.com/San-Shiro/QuickFlare/internal/core"
+	"github.com/San-Shiro/QuickFlare/internal/ipc"
 	"github.com/San-Shiro/QuickFlare/internal/supervisor"
 )
 
@@ -41,6 +42,118 @@ func parseFlags(fs *flag.FlagSet, args []string) []string {
 // out is a column-aligned writer for listings. Flush before returning.
 func out() *tabwriter.Writer {
 	return tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+}
+
+func notifyTrayReload(ctx context.Context) {
+	client, err := ipc.Discover()
+	if err == nil && client != nil {
+		_ = client.Reload(ctx)
+	}
+}
+
+// ---------- start ----------
+
+func cmdStart(ctx context.Context, args []string) error {
+	client, err := ipc.Discover()
+	if err == nil && client != nil {
+		fmt.Printf("QuickFlare is already running (PID %d).\n", client.PID())
+		_ = client.Open(ctx)
+		return nil
+	}
+
+	fmt.Println("Starting QuickFlare...")
+	if err := startTrayProcess(); err != nil {
+		return err
+	}
+
+	// Poll until IPC responds or timeout
+	deadline := time.Now().Add(4 * time.Second)
+	for time.Now().Before(deadline) {
+		time.Sleep(150 * time.Millisecond)
+		if c, err := ipc.Discover(); err == nil && c != nil {
+			fmt.Printf("QuickFlare started (PID %d).\n", c.PID())
+			return nil
+		}
+	}
+
+	fmt.Println("QuickFlare process launched; waiting for tray initialization.")
+	return nil
+}
+
+// ---------- stop ----------
+
+func cmdStop(ctx context.Context, args []string) error {
+	client, err := ipc.Discover()
+	if err != nil || client == nil {
+		fmt.Println("QuickFlare is not running.")
+		return nil
+	}
+
+	pid := client.PID()
+	fmt.Printf("Stopping QuickFlare (PID %d)...\n", pid)
+	if err := client.Quit(ctx); err != nil {
+		return fmt.Errorf("send quit signal: %w", err)
+	}
+
+	// Wait for process to exit
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		time.Sleep(150 * time.Millisecond)
+		if _, err := ipc.Discover(); err != nil {
+			fmt.Println("QuickFlare stopped.")
+			return nil
+		}
+	}
+	fmt.Println("QuickFlare stop signal sent.")
+	return nil
+}
+
+// ---------- pause ----------
+
+func cmdPause(ctx context.Context, args []string) error {
+	client, err := ipc.Discover()
+	if err == nil && client != nil {
+		if err := client.Pause(ctx); err != nil {
+			return fmt.Errorf("pause routes: %w", err)
+		}
+		fmt.Println("Routes paused.")
+		return nil
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+	cfg.RoutesDisabled = true
+	if err := cfg.Save(); err != nil {
+		return err
+	}
+	fmt.Println("Routes set to paused in settings (QuickFlare is currently not running).")
+	return nil
+}
+
+// ---------- resume ----------
+
+func cmdResume(ctx context.Context, args []string) error {
+	client, err := ipc.Discover()
+	if err == nil && client != nil {
+		if err := client.Resume(ctx); err != nil {
+			return fmt.Errorf("resume routes: %w", err)
+		}
+		fmt.Println("Routes resumed.")
+		return nil
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+	cfg.RoutesDisabled = false
+	if err := cfg.Save(); err != nil {
+		return err
+	}
+	fmt.Println("Routes set to active in settings (QuickFlare is currently not running).")
+	return nil
 }
 
 // ---------- login ----------
@@ -96,6 +209,7 @@ func cmdLogin(ctx context.Context, args []string) error {
 	if err := cfg.Save(); err != nil {
 		return fmt.Errorf("save settings: %w", err)
 	}
+	notifyTrayReload(ctx)
 
 	path, _ := config.Path()
 	fmt.Printf("Token verified. %d domain(s) available, default is %s.\n", len(zones), cfg.Domain)
@@ -204,6 +318,7 @@ func routeAdd(ctx context.Context, args []string) error {
 	if err := s.saveRoutes(routes); err != nil {
 		return err
 	}
+	notifyTrayReload(ctx)
 
 	fmt.Printf("https://%s is live.\n", host)
 	fmt.Println("\nIt is public - QuickFlare adds no login. It answers only while a")
@@ -321,6 +436,7 @@ func routeRemove(ctx context.Context, args []string) error {
 	if err := s.saveRoutes(routes); err != nil {
 		return err
 	}
+	notifyTrayReload(ctx)
 
 	fmt.Printf("Removed %s.\n", host)
 	for _, p := range problems {
@@ -499,6 +615,29 @@ func cmdStatus(ctx context.Context, args []string) error {
 
 	w := out()
 	fmt.Fprintf(w, "config\t%s\t\n", path)
+
+	client, _ := ipc.Discover()
+	if client != nil {
+		st, err := client.Status(ctx)
+		if err == nil && st != nil {
+			fmt.Fprintf(w, "tray app\trunning (PID %d)\t\n", st.PID)
+			if st.Disabled {
+				fmt.Fprintf(w, "route state\tpaused\t\n")
+			} else {
+				fmt.Fprintf(w, "route state\tactive\t\n")
+			}
+		} else {
+			fmt.Fprintf(w, "tray app\trunning (PID %d)\t\n", client.PID())
+		}
+	} else {
+		fmt.Fprintf(w, "tray app\tstopped\t\n")
+		if cfg.RoutesDisabled {
+			fmt.Fprintf(w, "route state\tpaused (saved)\t\n")
+		} else {
+			fmt.Fprintf(w, "route state\tactive (saved)\t\n")
+		}
+	}
+
 	fmt.Fprintf(w, "token\t%s\t\n", tokenState(cfg))
 	fmt.Fprintf(w, "token at rest\t%s\t\n", secretState())
 	fmt.Fprintf(w, "domain\t%s\t\n", orNone(cfg.Domain))

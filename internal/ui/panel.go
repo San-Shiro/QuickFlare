@@ -18,10 +18,13 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 
+	"os"
+
 	"github.com/San-Shiro/QuickFlare/internal/autostart"
 	"github.com/San-Shiro/QuickFlare/internal/cloudflare"
 	"github.com/San-Shiro/QuickFlare/internal/config"
 	"github.com/San-Shiro/QuickFlare/internal/core"
+	"github.com/San-Shiro/QuickFlare/internal/ipc"
 	"github.com/San-Shiro/QuickFlare/internal/supervisor"
 )
 
@@ -502,6 +505,79 @@ func (p *Panel) restore() {
 	p.settings.APIToken = cfg.APIToken
 	p.tokenEd.SetText(cfg.APIToken)
 	p.startVerify(cfg.APIToken)
+}
+
+// ReloadFromDisk reloads the saved configuration from disk, updating the route list
+// and token if they were modified externally (e.g. via CLI).
+func (p *Panel) ReloadFromDisk() {
+	p.dispatch(func() {
+		cfg, err := config.Load()
+		if err != nil {
+			dbg("reload config failed: %v", err)
+			return
+		}
+		p.savedDomain = cfg.Domain
+		p.settings.APIToken = cfg.APIToken
+		p.tokenEd.SetText(cfg.APIToken)
+
+		existingStatus := make(map[string]struct {
+			status connStatus
+			detail string
+		})
+		for _, r := range p.routes {
+			existingStatus[strings.ToLower(r.Hostname)] = struct {
+				status connStatus
+				detail string
+			}{status: r.Status, detail: r.Detail}
+		}
+
+		var updatedRoutes []Route
+		for _, sr := range cfg.Routes {
+			st := statusIdle
+			detail := "checking..."
+			if p.disabled {
+				detail = ""
+			}
+			if prev, ok := existingStatus[strings.ToLower(sr.Hostname)]; ok {
+				st = prev.status
+				detail = prev.detail
+			}
+			updatedRoutes = append(updatedRoutes, Route{
+				Route: core.Route{
+					Hostname: sr.Hostname,
+					Target:   sr.Target,
+					ZoneID:   sr.ZoneID,
+					Status:   st,
+					Detail:   detail,
+				},
+			})
+		}
+		p.routes = updatedRoutes
+		p.triggerPortProbe()
+
+		if !p.disabled && p.tunnel != nil {
+			p.ensureTunnel()
+		}
+		p.invalidate()
+	})
+}
+
+// StatusData returns runtime status for IPC inspection.
+func (p *Panel) StatusData() ipc.StatusData {
+	p.mu.Lock()
+	disabled := p.disabled
+	count := len(p.routes)
+	engineVer := p.cfEngineVersion
+	p.mu.Unlock()
+
+	return ipc.StatusData{
+		OK:            true,
+		PID:           os.Getpid(),
+		Running:       true,
+		Disabled:      disabled,
+		RoutesCount:   count,
+		EngineVersion: engineVer,
+	}
 }
 
 func (p *Panel) setStatus(msg string, tone color.NRGBA) {

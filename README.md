@@ -29,7 +29,7 @@ there is nothing else to install.
 
 | File | |
 |---|---|
-| `QuickFlare-0.3.3-x64.msi` | Installer, per-user, no admin |
+| `QuickFlare-0.3.3-x64.msi` | Installer, per-user, adds quickflare to PATH |
 | `QuickFlare-0.3.3.exe` | Portable, zero setup |
 
 **Linux** — command line only, and currently a preview. See

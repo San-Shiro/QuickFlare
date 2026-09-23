@@ -29,6 +29,10 @@ const usageText = `quickflare - publish a localhost port through Cloudflare Tunn
 
 usage: quickflare <command> [flags]
 
+  start               start the QuickFlare tray application
+  stop                stop the running QuickFlare tray application
+  pause               pause route forwarding (temporarily disable)
+  resume              resume route forwarding (re-enable)
   login               store and verify a Cloudflare API token
   domains             list the zones the token can reach
   route add <name>    publish <name>.<domain> -> a local port
@@ -37,8 +41,9 @@ usage: quickflare <command> [flags]
   quick               a temporary trycloudflare.com link, no account needed
   run                 run the tunnel connector in the foreground
   service             install the connector as a systemd user service (Linux)
-  status              token, domain, connector and route state
+  status              token, domain, connector, route, and tray state
   reconcile           re-check stored routes against Cloudflare
+  path                install or manage quickflare in Windows PATH
 
 Run 'quickflare <command> -h' for the flags a command takes.
 `
@@ -59,6 +64,14 @@ func main() {
 	var err error
 
 	switch os.Args[1] {
+	case "start":
+		err = cmdStart(ctx, args)
+	case "stop":
+		err = cmdStop(ctx, args)
+	case "pause":
+		err = cmdPause(ctx, args)
+	case "resume":
+		err = cmdResume(ctx, args)
 	case "login":
 		err = cmdLogin(ctx, args)
 	case "domains":
@@ -75,6 +88,8 @@ func main() {
 		err = cmdStatus(ctx, args)
 	case "reconcile":
 		err = cmdReconcile(ctx, args)
+	case "path":
+		err = cmdPath(ctx, args)
 	case "help", "-h", "--help":
 		fmt.Print(usageText)
 		return
