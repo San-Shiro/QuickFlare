@@ -226,10 +226,15 @@ type Panel struct {
 	settingsBtn widget.Clickable
 	emptyAddBtn widget.Clickable
 
-	// Delete confirmation. Held by hostname rather than index: the row can
-	// move while the dialog is open.
-	pendingDelete string
-	confirmBtn    widget.Clickable
+	// Delete confirmation modal overlay
+	pendingDelete   string
+	confirmBtn      widget.Clickable
+	deleteBackdrop  widget.Clickable
+	deleteFadeStart time.Time
+
+	// View transitions & animations
+	trans        viewTransition
+	winFadeStart time.Time
 
 	// Add route
 	hostEd    widget.Editor
@@ -249,6 +254,14 @@ type Panel struct {
 	// Settings: startup state
 	restoreLastState bool
 	restoreStateBtn  widget.Clickable
+}
+
+type viewTransition struct {
+	active   bool
+	fromView view
+	toView   view
+	start    time.Time
+	duration time.Duration
 }
 
 const (
@@ -497,13 +510,19 @@ func (p *Panel) setStatus(msg string, tone color.NRGBA) {
 	p.statusTone = tone
 }
 
+func (p *Panel) invalidate() {
+	if p.w != nil {
+		p.w.Invalidate()
+	}
+}
+
 // dispatch hands a state change to the Gio loop and wakes it.
 func (p *Panel) dispatch(f func()) {
 	select {
 	case p.post <- f:
 	default: // queue full: drop rather than block a background goroutine
 	}
-	p.w.Invalidate()
+	p.invalidate()
 }
 
 // Toggle shows or hides the panel. It is called from the tray goroutine and
@@ -596,6 +615,7 @@ func (p *Panel) showPanel(h uintptr) {
 	p.mu.Lock()
 	p.alpha = 0
 	p.shownAt = time.Now()
+	p.winFadeStart = time.Now()
 	p.mu.Unlock()
 
 	// Queued before the window is up: posts are drained on the next frame,
@@ -604,7 +624,7 @@ func (p *Panel) showPanel(h uintptr) {
 
 	Show(h)
 	Focus(h)
-	p.w.Invalidate()
+	p.invalidate()
 	p.fadeTo(h, 255, nil)
 	p.triggerPortProbe()
 }
@@ -666,6 +686,37 @@ func (p *Panel) resetToHome() {
 	p.view = p.homeView()
 	p.domainOpen = false
 	p.pendingDelete = ""
+}
+
+// setView transitions to a new view with a smooth cross-fade animation.
+func (p *Panel) setView(v view) {
+	if p.view == v {
+		return
+	}
+	p.trans = viewTransition{
+		active:   true,
+		fromView: p.view,
+		toView:   v,
+		start:    time.Now(),
+		duration: 150 * time.Millisecond,
+	}
+	p.view = v
+	p.invalidate()
+}
+
+// hasStartingRoutes reports whether any route or quick tunnel is configuring.
+func (p *Panel) hasStartingRoutes() bool {
+	for i := range p.routes {
+		if p.routes[i].Status == statusStarting {
+			return true
+		}
+	}
+	for i := range p.quicks {
+		if p.quicks[i].Status == statusStarting {
+			return true
+		}
+	}
+	return false
 }
 
 // watchFocus closes the panel when the foreground moves elsewhere.
@@ -788,6 +839,23 @@ func (p *Panel) drainPosts() {
 
 // handleInput processes button presses before the frame is laid out.
 func (p *Panel) handleInput(gtx layout.Context) {
+	// If delete confirmation overlay is open, intercept input so clicks
+	// do not fall through to underlying mainView pills or buttons.
+	if p.pendingDelete != "" {
+		if p.cancelBtn.Clicked(gtx) || p.deleteBackdrop.Clicked(gtx) {
+			p.pendingDelete = ""
+			p.invalidate()
+			return
+		}
+		if p.confirmBtn.Clicked(gtx) {
+			p.deleteRoute(p.pendingDelete)
+			p.pendingDelete = ""
+			p.invalidate()
+			return
+		}
+		return
+	}
+
 	// The close affordance exists on every screen except onboarding, which
 	// has no exit until a mode is chosen.
 	if p.view != viewOnboarding && p.closeBtn.Clicked(gtx) {
@@ -804,10 +872,10 @@ func (p *Panel) handleInput(gtx layout.Context) {
 		if p.continueBtn.Clicked(gtx) {
 			if p.choice == 0 {
 				p.tokenEd.SetText(p.settings.APIToken)
-				p.view = viewTokenSetup
+				p.setView(viewTokenSetup)
 			} else {
 				p.mode = modeQuick
-				p.view = viewMain
+				p.setView(viewMain)
 			}
 		}
 
@@ -821,7 +889,7 @@ func (p *Panel) handleInput(gtx layout.Context) {
 			}
 		}
 		if p.cancelBtn.Clicked(gtx) {
-			p.view = p.homeView()
+			p.setView(p.homeView())
 		}
 		if p.verifyBtn.Clicked(gtx) {
 			p.startVerify(p.tokenEd.Text())
@@ -839,17 +907,17 @@ func (p *Panel) handleInput(gtx layout.Context) {
 	case viewConfirmDelete:
 		if p.cancelBtn.Clicked(gtx) {
 			p.pendingDelete = ""
-			p.view = viewMain
+			p.setView(viewMain)
 		}
 		if p.confirmBtn.Clicked(gtx) {
 			p.deleteRoute(p.pendingDelete)
 			p.pendingDelete = ""
-			p.view = viewMain
+			p.setView(viewMain)
 		}
 
 	case viewAddRoute:
 		if p.cancelBtn.Clicked(gtx) {
-			p.view = viewMain
+			p.setView(viewMain)
 		}
 		if p.createBtn.Clicked(gtx) {
 			if p.mode == modeQuick {
@@ -858,20 +926,15 @@ func (p *Panel) handleInput(gtx layout.Context) {
 					p.setStatus(err.Error(), colWarning)
 				} else {
 					p.startQuick(port)
+					p.setView(viewMain)
 				}
 				break
 			}
 			if r, ok := p.buildRoute(); ok {
 				p.routes = append(p.routes, r)
-				// Not success yet: nothing has been published at this
-				// point. Claiming it here is what left a green "Added ..."
-				// sitting under a route that had already failed.
 				p.setStatus("Publishing "+shortHost(r.Hostname)+"...", colWarning)
-				p.view = viewMain
+				p.setView(viewMain)
 				p.saveConfig()
-				// The whole point of connecting an API token is that this
-				// needs no separate click: publish DNS and ingress now
-				// rather than leaving the row as UI-only intent.
 				p.provisionRoute(r.Hostname, r.Target)
 				p.triggerPortProbe()
 			}
@@ -887,7 +950,7 @@ func (p *Panel) handleMainInput(gtx layout.Context) {
 
 	if p.addTokenBtn.Clicked(gtx) {
 		p.tokenEd.SetText(p.settings.APIToken)
-		p.view = viewTokenSetup
+		p.setView(viewTokenSetup)
 		return
 	}
 
@@ -911,7 +974,7 @@ func (p *Panel) handleMainInput(gtx layout.Context) {
 	}
 	if p.settingsBtn.Clicked(gtx) {
 		p.tokenEd.SetText(p.settings.APIToken)
-		p.view = viewSettings
+		p.setView(viewSettings)
 	}
 	if p.docsBtn.Clicked(gtx) {
 		if docsURL == "" {
@@ -930,11 +993,9 @@ func (p *Panel) handleMainInput(gtx layout.Context) {
 				p.copyConn(gtx, "https://"+p.routes[i].Hostname, &p.routes[i].copiedAt)
 			}
 			if p.routes[i].stopBtn.Clicked(gtx) {
-				// Deleting a route tears down a real DNS record and ingress
-				// rule on the account - not just a row in a list - so it
-				// asks first, and says what it is about to remove.
 				p.pendingDelete = p.routes[i].Hostname
-				p.view = viewConfirmDelete
+				p.deleteFadeStart = time.Now()
+				p.invalidate()
 				break
 			}
 		}
@@ -961,12 +1022,12 @@ func (p *Panel) startAdd() {
 	}
 	if !p.configured() {
 		p.setStatus("Connect a domain before adding routes", colWarning)
-		p.view = viewTokenSetup
+		p.setView(viewTokenSetup)
 		return
 	}
 	p.hostEd.SetText("")
 	p.portEd.SetText("")
-	p.view = viewAddRoute
+	p.setView(viewAddRoute)
 }
 
 // copyConn puts a URL on the clipboard and marks the pill as copied.
@@ -1230,7 +1291,7 @@ func (p *Panel) currentDomain() string {
 
 // startQuickPrompt reuses the add-route screen for the port-only quick form.
 func (p *Panel) startQuickPrompt() {
-	p.view = viewAddRoute
+	p.setView(viewAddRoute)
 }
 
 // startQuick opens an anonymous tunnel on a background goroutine. It can take
@@ -1248,7 +1309,7 @@ func (p *Panel) startQuick(port int) {
 	p.addCloser(entry.close)
 	p.mode = modeQuick
 	p.setStatus("Opening a quick tunnel...", colWarning)
-	p.view = viewMain
+	p.setView(viewMain)
 
 	p.triggerPortProbe()
 
@@ -1429,15 +1490,8 @@ func (p *Panel) statusText() string {
 	return "Not configured"
 }
 
-func (p *Panel) layout(gtx layout.Context) layout.Dimensions {
-	// Flat, not rounded. The window is rectangular and DWM already rounds and
-	// clips it (see StyleWindow); painting a second, smaller radius here left
-	// the corners between the two shapes unpainted. Fill the whole surface and
-	// let the compositor decide where the edge is.
-	paint.FillShape(gtx.Ops, colBackground,
-		clip.Rect{Max: gtx.Constraints.Max}.Op())
-
-	switch p.view {
+func (p *Panel) renderView(gtx layout.Context, v view) layout.Dimensions {
+	switch v {
 	case viewOnboarding:
 		return p.onboardingView(gtx)
 	case viewTokenSetup, viewSettings:
@@ -1449,4 +1503,76 @@ func (p *Panel) layout(gtx layout.Context) layout.Dimensions {
 	default:
 		return p.mainView(gtx)
 	}
+}
+
+func (p *Panel) layout(gtx layout.Context) layout.Dimensions {
+	// Flat, not rounded. The window is rectangular and DWM already rounds and
+	// clips it (see StyleWindow); painting a second, smaller radius here left
+	// the corners between the two shapes unpainted. Fill the whole surface and
+	// let the compositor decide where the edge is.
+	paint.FillShape(gtx.Ops, colBackground,
+		clip.Rect{Max: gtx.Constraints.Max}.Op())
+
+	now := gtx.Now
+	if now.IsZero() {
+		now = time.Now()
+	}
+
+	// Window-open fade in animation
+	var winSt paint.OpacityStack
+	hasWinFade := false
+	if !p.winFadeStart.IsZero() {
+		elapsed := now.Sub(p.winFadeStart)
+		if elapsed < 140*time.Millisecond {
+			progress := float32(elapsed) / float32(140*time.Millisecond)
+			winSt = paint.PushOpacity(gtx.Ops, progress)
+			hasWinFade = true
+			gtx.Execute(op.InvalidateCmd{})
+		} else {
+			p.winFadeStart = time.Time{}
+		}
+	}
+
+	var dims layout.Dimensions
+	if p.trans.active {
+		elapsed := now.Sub(p.trans.start)
+		if elapsed >= p.trans.duration {
+			p.trans.active = false
+			dims = p.renderView(gtx, p.view)
+		} else {
+			progress := float32(elapsed) / float32(p.trans.duration)
+			gtx.Execute(op.InvalidateCmd{})
+
+			if p.trans.fromView != p.trans.toView {
+				mFrom := op.Record(gtx.Ops)
+				p.renderView(gtx, p.trans.fromView)
+				cFrom := mFrom.Stop()
+
+				stFrom := paint.PushOpacity(gtx.Ops, 1.0-progress)
+				cFrom.Add(gtx.Ops)
+				stFrom.Pop()
+			}
+
+			mTo := op.Record(gtx.Ops)
+			dims = p.renderView(gtx, p.trans.toView)
+			cTo := mTo.Stop()
+
+			stTo := paint.PushOpacity(gtx.Ops, progress)
+			cTo.Add(gtx.Ops)
+			stTo.Pop()
+		}
+	} else {
+		dims = p.renderView(gtx, p.view)
+	}
+
+	// Delete confirmation modal overlay
+	if p.pendingDelete != "" {
+		p.deleteOverlay(gtx)
+	}
+
+	if hasWinFade {
+		winSt.Pop()
+	}
+
+	return dims
 }

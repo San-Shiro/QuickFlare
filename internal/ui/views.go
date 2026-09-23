@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"image"
+	"image/color"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"gioui.org/widget"
+	"gioui.org/widget/material"
 
 	"github.com/San-Shiro/QuickFlare/internal/autostart"
 )
@@ -120,6 +122,9 @@ func (p *Panel) statusBar(gtx layout.Context, withActions bool) layout.Dimension
 		return panelInset(func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					if p.hasStartingRoutes() && !p.disabled {
+						return alignedSpinner(gtx, dimDotStatusBar+2, 16, colAccent)
+					}
 					tone := p.statusTone
 					if p.disabled {
 						tone = colWarning
@@ -798,7 +803,12 @@ func (p *Panel) pill(gtx layout.Context, d pillData) layout.Dimensions {
 
 			return layout.Inset{Left: unit.Dp(sp6), Right: unit.Dp(sp4)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
-					layout.Rigid(statusDot(dotColor, dimDot)),
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						if d.status == statusStarting && !p.disabled {
+							return alignedSpinner(gtx, 10, 16, colAccent)
+						}
+						return statusDot(dotColor, dimDot)(gtx)
+					}),
 					layout.Rigid(hgap(sp5)),
 					layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 						// vcenterLeft wraps the whole column, not the labels
@@ -848,7 +858,7 @@ func (p *Panel) pillDetail(d pillData, copied bool) layout.Widget {
 	if d.status == statusError {
 		tone = colError
 	} else if d.status == statusStarting {
-		tone = colWarning
+		tone = colAccent
 	} else if d.status == statusConnected && d.hasPortCheck && !d.portListening {
 		tone = colWarning
 		text = d.detail + " · no service listening"
@@ -996,79 +1006,84 @@ func (p *Panel) formFooter(primary string) layout.Widget {
 	}
 }
 
-// ---------- confirm delete ----------
+// ---------- confirm delete modal overlay ----------
 
-// confirmDeleteView asks before tearing a route down.
-//
-// It lists what is about to be removed rather than asking a bare "are you
-// sure": these are account-level deletions on Cloudflare, not a row leaving a
-// list, and the difference between "unpublish this" and "delete a DNS record
-// and a tunnel route" is exactly what a confirmation should be making
-// visible.
-func (p *Panel) confirmDeleteView(gtx layout.Context) layout.Dimensions {
-	r := p.routeByHostname(p.pendingDelete)
-	if r == nil {
-		// Route vanished while the dialog was open - nothing to confirm.
-		return p.mainView(gtx)
+// deleteOverlay renders a floating modal confirmation dialog centered over
+// the main view with a dimmed backdrop scrim, replacing the full-page confirmation.
+func (p *Panel) deleteOverlay(gtx layout.Context) layout.Dimensions {
+	if p.pendingDelete == "" {
+		return layout.Dimensions{}
 	}
 
-	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return p.header(gtx, "Remove route", false)
-		}),
-		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-			return panelInset(func(gtx layout.Context) layout.Dimensions {
-				return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return surface(gtx, colSurface, rCard, func(gtx layout.Context) layout.Dimensions {
-							return layout.UniformInset(unit.Dp(sp6)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-								return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-									layout.Rigid(p.mono(truncateHost(r.Hostname), tsPillHost, 500, colTextPrimary)),
-									layout.Rigid(vgap(sp2)),
-									layout.Rigid(p.mono(r.Target, tsPillTarget, wRegular, colTextMuted)),
-								)
-							})
-						})
-					}),
-					layout.Rigid(vgap(sp6)),
-					layout.Rigid(p.caption("This removes from Cloudflare:", colTextMuted)),
-					layout.Rigid(vgap(sp3)),
-					layout.Rigid(p.removalItem("Its DNS record, if QuickFlare created it")),
-					layout.Rigid(p.removalItem("Its route in the tunnel")),
-					layout.Rigid(vgap(sp5)),
-					layout.Rigid(p.caption(
-						"The subdomain becomes free to use again. Anything running on "+
-							r.Target+" keeps running.", colTextDisabled)),
-					layout.Flexed(1, flexFill),
-				)
-			})(gtx)
-		}),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return panelInset(func(gtx layout.Context) layout.Dimensions {
-				return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
-					layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-						return p.secondaryButton(gtx, &p.cancelBtn, "Cancel")
-					}),
-					layout.Rigid(hgap(sp4)),
-					layout.Flexed(1.4, func(gtx layout.Context) layout.Dimensions {
-						return p.destructiveButton(gtx, &p.confirmBtn, "Remove route")
-					}),
-				)
-			})(gtx)
-		}),
-		layout.Rigid(p.statusBarRigid(false)),
-	)
+	now := gtx.Now
+	if now.IsZero() {
+		now = time.Now()
+	}
+
+	progress := float32(1.0)
+	if !p.deleteFadeStart.IsZero() {
+		elapsed := now.Sub(p.deleteFadeStart)
+		if elapsed < 120*time.Millisecond {
+			progress = float32(elapsed) / float32(120*time.Millisecond)
+			gtx.Execute(op.InvalidateCmd{})
+		} else {
+			p.deleteFadeStart = time.Time{}
+		}
+	}
+
+	st := paint.PushOpacity(gtx.Ops, progress)
+	defer st.Pop()
+
+	// 1. Dimmed backdrop scrim over the full panel
+	scrim := color.NRGBA{R: 0x00, G: 0x00, B: 0x00, A: 195}
+	paint.FillShape(gtx.Ops, scrim, clip.Rect{Max: gtx.Constraints.Max}.Op())
+
+	// Dismiss when clicking the backdrop
+	p.deleteBackdrop.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		return layout.Dimensions{Size: gtx.Constraints.Max}
+	})
+
+	// 2. Centered modal card
+	return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		cardW := gtx.Dp(unit.Dp(280))
+		gtx.Constraints.Min.X = cardW
+		gtx.Constraints.Max.X = cardW
+
+		return surface(gtx, colSurfaceRaised, rCard, func(gtx layout.Context) layout.Dimensions {
+			return outlined(gtx, colBorderSubtle, rCard, func(gtx layout.Context) layout.Dimensions {
+				return layout.UniformInset(unit.Dp(sp7)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+					return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+						layout.Rigid(p.title("Remove route?")),
+						layout.Rigid(vgap(sp3)),
+						layout.Rigid(p.monoOneLine(truncateHost(p.pendingDelete), tsPillHost, 600, colTextPrimary)),
+						layout.Rigid(vgap(sp2)),
+						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+							l := material.Label(p.th, tsCaption, "This deletes its DNS record and tunnel route on Cloudflare.")
+							l.Color = colTextMuted
+							return l.Layout(gtx)
+						}),
+						layout.Rigid(vgap(sp7)),
+						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+							return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+								layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+									return p.secondaryButton(gtx, &p.cancelBtn, "Cancel")
+								}),
+								layout.Rigid(hgap(sp4)),
+								layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+									return p.destructiveButton(gtx, &p.confirmBtn, "Delete")
+								}),
+							)
+						}),
+					)
+				})
+			})
+		})
+	})
 }
 
-// removalItem is one bullet in the confirmation list.
-func (p *Panel) removalItem(s string) layout.Widget {
-	return func(gtx layout.Context) layout.Dimensions {
-		return layout.Inset{Bottom: unit.Dp(sp2)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
-				layout.Rigid(alignedDot(colError, 4, 16)),
-				layout.Rigid(hgap(sp4)),
-				layout.Flexed(1, p.caption(s, colTextMuted)),
-			)
-		})
-	}
+// confirmDeleteView is kept for backwards compatibility; it layers deleteOverlay onto mainView.
+func (p *Panel) confirmDeleteView(gtx layout.Context) layout.Dimensions {
+	dims := p.mainView(gtx)
+	p.deleteOverlay(gtx)
+	return dims
 }

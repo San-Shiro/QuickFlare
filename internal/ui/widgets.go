@@ -3,7 +3,10 @@ package ui
 import (
 	"image"
 	"image/color"
+	"math"
+	"time"
 
+	"gioui.org/f32"
 	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -203,6 +206,65 @@ func alignedDot(c color.NRGBA, dotDp, lineDp int) layout.Widget {
 		gtx.Constraints = layout.Exact(image.Pt(gtx.Dp(unit.Dp(dotDp)), gtx.Dp(unit.Dp(lineDp))))
 		return centered(gtx, statusDot(c, dotDp))
 	}
+}
+
+// spinner renders an active animated circular arc that continuously rotates
+// while a route or tunnel is configuring. Redraws are scheduled via
+// gtx.Execute(op.InvalidateCmd{}) for smooth 60fps rotation.
+func spinner(gtx layout.Context, sizeDp int, c color.NRGBA) layout.Dimensions {
+	d := gtx.Dp(unit.Dp(sizeDp))
+	if d <= 0 {
+		d = 12
+	}
+	center := f32.Pt(float32(d)/2, float32(d)/2)
+	radius := float32(d)/2 - 1.5
+	if radius < 2 {
+		radius = float32(d) / 2
+	}
+	strokeWidth := float32(1.5)
+	if d >= 16 {
+		strokeWidth = 2.0
+	}
+
+	gtx.Execute(op.InvalidateCmd{})
+
+	now := gtx.Now
+	if now.IsZero() {
+		now = time.Now()
+	}
+	nanos := now.UnixNano() % 900_000_000
+	progress := float32(nanos) / 900_000_000.0
+	angle := progress * 2 * math.Pi
+
+	// Faint track ring
+	trackColor := c
+	trackColor.A = 35
+	var pTrack clip.Path
+	pTrack.Begin(gtx.Ops)
+	pTrack.MoveTo(f32.Pt(center.X+radius, center.Y))
+	pTrack.ArcTo(center, center, 2*math.Pi)
+	trackSpec := pTrack.End()
+	paint.FillShape(gtx.Ops, trackColor, clip.Stroke{Path: trackSpec, Width: strokeWidth}.Op())
+
+	// Active rotating arc
+	aff := op.Affine(f32.Affine2D{}.Rotate(center, angle)).Push(gtx.Ops)
+	var pArc clip.Path
+	pArc.Begin(gtx.Ops)
+	pArc.MoveTo(f32.Pt(center.X+radius, center.Y))
+	pArc.ArcTo(center, center, 1.5*math.Pi)
+	arcSpec := pArc.End()
+	paint.FillShape(gtx.Ops, c, clip.Stroke{Path: arcSpec, Width: strokeWidth}.Op())
+	aff.Pop()
+
+	return layout.Dimensions{Size: image.Pt(d, d)}
+}
+
+// alignedSpinner centers the animated spinner in a box with height matching lineDp.
+func alignedSpinner(gtx layout.Context, spinnerDp, lineDp int, c color.NRGBA) layout.Dimensions {
+	gtx.Constraints = layout.Exact(image.Pt(gtx.Dp(unit.Dp(spinnerDp)), gtx.Dp(unit.Dp(lineDp))))
+	return centered(gtx, func(gtx layout.Context) layout.Dimensions {
+		return spinner(gtx, spinnerDp, c)
+	})
 }
 
 // ---------- buttons ----------
