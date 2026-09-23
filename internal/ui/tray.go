@@ -13,6 +13,9 @@ import (
 //go:embed assets/tray.ico
 var trayIcon []byte
 
+//go:embed assets/tray_disabled.ico
+var trayIconDisabled []byte
+
 // Run wires the tray to the panel and blocks.
 //
 // Threading: Gio requires app.Main() on the main goroutine, so systray and the
@@ -36,14 +39,38 @@ func Run() {
 }
 
 func onReady(p *Panel) {
-	systray.SetIcon(trayIcon)
+	initialDisabled := p.IsDisabled()
+	if initialDisabled {
+		systray.SetIcon(trayIconDisabled)
+		systray.SetTooltip("QuickFlare - Routes paused (disabled)")
+	} else {
+		systray.SetIcon(trayIcon)
+		systray.SetTooltip("QuickFlare - Cloudflare tunnel routes")
+	}
 	systray.SetTitle("QuickFlare")
-	systray.SetTooltip("QuickFlare - Cloudflare tunnel routes")
 
 	// Left-click the tray icon toggles the panel, WARP-style.
 	systray.SetOnTapped(p.Toggle)
 
 	mOpen := systray.AddMenuItem("Open", "Show the QuickFlare panel")
+
+	disableTitle := "Disable Routes"
+	if initialDisabled {
+		disableTitle = "Enable Routes"
+	}
+	mDisable := systray.AddMenuItem(disableTitle, "Pause or resume the Cloudflare connector")
+
+	p.OnDisableChanged(func(disabled bool) {
+		if disabled {
+			mDisable.SetTitle("Enable Routes")
+			systray.SetIcon(trayIconDisabled)
+			systray.SetTooltip("QuickFlare - Routes paused (disabled)")
+		} else {
+			mDisable.SetTitle("Disable Routes")
+			systray.SetIcon(trayIcon)
+			systray.SetTooltip("QuickFlare - Cloudflare tunnel routes")
+		}
+	})
 
 	// "Start with Windows" lives here as well as in Settings because Settings
 	// is only reachable once a token is verified or a quick tunnel is
@@ -78,6 +105,9 @@ func onReady(p *Panel) {
 			select {
 			case <-mOpen.ClickedCh:
 				p.Open()
+
+			case <-mDisable.ClickedCh:
+				p.ToggleDisabled()
 
 			case <-startupClicks:
 				on, err := p.SetAutostart(!mStartup.Checked())

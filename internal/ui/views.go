@@ -80,6 +80,28 @@ func (p *Panel) header(gtx layout.Context, title string, showClose bool) layout.
 					return vcenterLeft(gtx, p.title(title))
 				}),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					if p.view != viewMain {
+						return layout.Dimensions{}
+					}
+					badgeText := "ACTIVE"
+					badgeColor := colAccent
+					if p.disabled {
+						badgeText = "PAUSED"
+						badgeColor = colTextMuted
+					}
+					return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
+						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+							return layout.Inset{Right: unit.Dp(sp3)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+								return vcenterLeft(gtx, p.mono(badgeText, tsCaption, wSemibold, badgeColor))
+							})
+						}),
+						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+							return p.toggle(gtx, &p.disableToggle, !p.disabled)
+						}),
+						layout.Rigid(hgap(sp4)),
+					)
+				}),
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					if !showClose {
 						return layout.Dimensions{}
 					}
@@ -97,7 +119,13 @@ func (p *Panel) statusBar(gtx layout.Context, withActions bool) layout.Dimension
 	return fixedH(gtx, dimStatusBarH+sp4, func(gtx layout.Context) layout.Dimensions {
 		return panelInset(func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
-				layout.Rigid(alignedDot(p.statusTone, dimDotStatusBar, 16)),
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					tone := p.statusTone
+					if p.disabled {
+						tone = colWarning
+					}
+					return alignedDot(tone, dimDotStatusBar, 16)(gtx)
+				}),
 				layout.Rigid(hgap(sp3)),
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 					return p.ellipsisCaption(gtx, p.statusText())
@@ -342,13 +370,18 @@ func (p *Panel) settingsRows() []layout.Widget {
 			)
 		},
 	}
+	rows = append(rows,
+		vgap(sp7),
+		p.sectionLabel("App"),
+	)
 	if autostart.Supported() {
 		rows = append(rows,
-			vgap(sp7),
-			p.sectionLabel("App"),
 			p.settingToggle("Start with Windows", &p.autostartBtn, p.autostartOn),
 		)
 	}
+	rows = append(rows,
+		p.settingToggle("Restore last state on launch", &p.restoreStateBtn, p.restoreLastState),
+	)
 
 	engineVer := p.cfEngineVersion
 	if engineVer == "" {
@@ -757,7 +790,9 @@ func (p *Panel) pill(gtx layout.Context, d pillData) layout.Dimensions {
 			fillRRect(gtx, gtx.Constraints.Max, rCard, bg)
 
 			dotColor := statusColor(d.status)
-			if d.status == statusConnected && d.hasPortCheck && !d.portListening {
+			if p.disabled {
+				dotColor = colTextDisabled
+			} else if d.status == statusConnected && d.hasPortCheck && !d.portListening {
 				dotColor = colWarning
 			}
 
@@ -800,6 +835,13 @@ func (p *Panel) pill(gtx layout.Context, d pillData) layout.Dimensions {
 func (p *Panel) pillDetail(d pillData, copied bool) layout.Widget {
 	if copied {
 		return p.mono("copied to clipboard", tsPillTarget, wRegular, colSuccess)
+	}
+	if p.disabled {
+		txt := d.detail
+		if !strings.Contains(txt, "paused") {
+			txt = txt + " · paused"
+		}
+		return p.mono(txt, tsPillTarget, wRegular, colTextDisabled)
 	}
 	tone := colTextMuted
 	text := d.detail

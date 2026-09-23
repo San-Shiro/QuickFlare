@@ -23,6 +23,10 @@ func (p *Panel) ensureTunnel() {
 	if client == nil {
 		return
 	}
+	if p.disabled {
+		p.setStatus("Routes paused (disabled)", colWarning)
+		return
+	}
 	if p.binErr != nil {
 		p.setStatus("cloudflared not installed - routes cannot connect", colError)
 		return
@@ -73,6 +77,11 @@ func (p *Panel) ensureTunnel() {
 		p.addCloser(sup.Stop)
 
 		p.dispatch(func() {
+			if p.disabled {
+				// User paused routes while connector was starting
+				sup.Stop()
+				return
+			}
 			p.tunnelID = tun.ID
 			p.tunnel = sup
 			p.setStatus("Tunnel ready", colSuccess)

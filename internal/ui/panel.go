@@ -240,6 +240,15 @@ type Panel struct {
 	// Live port reachability cache
 	portsMu        sync.RWMutex
 	portsListening map[int]bool
+
+	// Route enable/disable state (WARP toggle)
+	disabled         bool
+	disableToggle    widget.Clickable
+	onDisableChanged func(bool)
+
+	// Settings: startup state
+	restoreLastState bool
+	restoreStateBtn  widget.Clickable
 }
 
 const (
@@ -355,6 +364,68 @@ func (p *Panel) toggleAutostart() {
 	go p.SetAutostart(want)
 }
 
+// IsDisabled reports whether routes are currently paused/disabled.
+func (p *Panel) IsDisabled() bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.disabled
+}
+
+// OnDisableChanged registers a listener notified when route state changes.
+func (p *Panel) OnDisableChanged(fn func(bool)) {
+	p.mu.Lock()
+	p.onDisableChanged = fn
+	p.mu.Unlock()
+}
+
+// ToggleDisabled toggles the route enable/disable state.
+func (p *Panel) ToggleDisabled() {
+	p.dispatch(func() {
+		p.setDisabled(!p.disabled)
+	})
+}
+
+// SetDisabled sets the route enable/disable state.
+func (p *Panel) SetDisabled(disabled bool) {
+	p.dispatch(func() {
+		p.setDisabled(disabled)
+	})
+}
+
+func (p *Panel) setDisabled(disabled bool) {
+	if p.disabled == disabled {
+		return
+	}
+	p.mu.Lock()
+	p.disabled = disabled
+	cb := p.onDisableChanged
+	p.mu.Unlock()
+
+	p.saveConfig()
+
+	if cb != nil {
+		cb(disabled)
+	}
+
+	if disabled {
+		if p.tunnel != nil {
+			p.tunnel.Stop()
+			p.tunnel = nil
+		}
+		p.setStatus("Routes paused (disabled)", colWarning)
+	} else {
+		p.setStatus("Starting routes...", colWarning)
+		p.ensureTunnel()
+	}
+	p.triggerPortProbe()
+}
+
+// toggleRestoreLastState flips whether QuickFlare remembers route state across restarts.
+func (p *Panel) toggleRestoreLastState() {
+	p.restoreLastState = !p.restoreLastState
+	p.saveConfig()
+}
+
 // storedRoutes is the route list in its persisted form.
 func (p *Panel) storedRoutes() []config.StoredRoute {
 	out := make([]config.StoredRoute, 0, len(p.routes))
@@ -383,6 +454,22 @@ func (p *Panel) restore() {
 		return
 	}
 	p.savedDomain = cfg.Domain
+	p.restoreLastState = cfg.RestoreLastState
+	if p.restoreLastState {
+		p.disabled = cfg.RoutesDisabled
+	} else {
+		// Default to OFF on launch
+		p.disabled = true
+	}
+	if p.disabled {
+		p.status = "Routes paused (disabled)"
+		p.statusTone = colWarning
+	}
+
+	detail := "checking..."
+	if p.disabled {
+		detail = ""
+	}
 
 	// Load the cached list straight away so the panel is not empty while
 	// the network catches up - but mark every row unverified, because
@@ -393,7 +480,7 @@ func (p *Panel) restore() {
 			Target:   sr.Target,
 			ZoneID:   sr.ZoneID,
 			Status:   statusIdle,
-			Detail:   "checking...",
+			Detail:   detail,
 		}})
 	}
 
@@ -742,6 +829,9 @@ func (p *Panel) handleInput(gtx layout.Context) {
 		if p.autostartBtn.Clicked(gtx) {
 			p.toggleAutostart()
 		}
+		if p.restoreStateBtn.Clicked(gtx) {
+			p.toggleRestoreLastState()
+		}
 
 	case viewMain:
 		p.handleMainInput(gtx)
@@ -790,6 +880,11 @@ func (p *Panel) handleInput(gtx layout.Context) {
 }
 
 func (p *Panel) handleMainInput(gtx layout.Context) {
+	if p.disableToggle.Clicked(gtx) {
+		p.ToggleDisabled()
+		return
+	}
+
 	if p.addTokenBtn.Clicked(gtx) {
 		p.tokenEd.SetText(p.settings.APIToken)
 		p.view = viewTokenSetup
@@ -1006,9 +1101,11 @@ func (p *Panel) pickZone(opts []zoneOption) int {
 func (p *Panel) saveConfig() {
 	p.savedDomain = p.currentDomain()
 	cfg := &config.Config{
-		APIToken: p.settings.APIToken,
-		Domain:   p.savedDomain,
-		Routes:   p.storedRoutes(),
+		APIToken:         p.settings.APIToken,
+		Domain:           p.savedDomain,
+		Routes:           p.storedRoutes(),
+		RoutesDisabled:   p.disabled,
+		RestoreLastState: p.restoreLastState,
 	}
 	if err := cfg.Save(); err != nil {
 		dbg("config save failed: %v", err)
@@ -1304,6 +1401,9 @@ func validateLabel(label string) error { return core.ValidateLabel(label) }
 
 // statusText is the footer message, falling back to a summary of the session.
 func (p *Panel) statusText() string {
+	if p.disabled {
+		return "Routes paused (disabled)"
+	}
 	if p.status != "" {
 		return p.status
 	}

@@ -93,35 +93,38 @@ func ReconcileList(stored []Route, states map[string]*State, defaultZone string)
 	for host, st := range states {
 		known, isKnown := byHost[host]
 
-		// Neither half present: the route is gone from Cloudflare, so it goes
-		// from the list too rather than sitting there pretending.
-		if !st.InDNS && !st.InIngress {
-			if isKnown {
-				dropped = append(dropped, known.Hostname)
+		if isKnown {
+			r := known
+			if r.Target == "" {
+				r.Target = st.Target
 			}
+			if r.ZoneID == "" {
+				r.ZoneID = defaultZone
+			}
+
+			if st.InDNS && st.InIngress {
+				r.Status, r.Detail = StatusConnected, ""
+			} else {
+				// Not fully configured on Cloudflare (or deleted server-side):
+				// re-establish it so the stored route is healed.
+				r.Status, r.Detail = StatusStarting, "re-establishing..."
+			}
+			kept = append(kept, r)
 			continue
 		}
 
-		r := known
-		if !isKnown {
-			// Serving on Cloudflare but absent here - adopt it, using the
-			// port the ingress rule already names.
-			r = Route{Hostname: host, Target: st.Target, ZoneID: defaultZone}
-			adopted = append(adopted, host)
-		}
-		if r.Target == "" {
-			r.Target = st.Target
-		}
-		if r.ZoneID == "" {
-			r.ZoneID = defaultZone
+		// Not in stored list:
+		if !st.InDNS && !st.InIngress {
+			continue
 		}
 
+		// Serving on Cloudflare but absent from local cache - adopt it,
+		// using the port the ingress rule already names.
+		r := Route{Hostname: host, Target: st.Target, ZoneID: defaultZone}
+		adopted = append(adopted, host)
 		if st.InDNS && st.InIngress {
 			r.Status, r.Detail = StatusConnected, ""
 		} else {
-			// Half-published: one side survived. Republishing restores the
-			// missing half instead of leaving a route that resolves nowhere
-			// or a rule nothing points at.
 			r.Status, r.Detail = StatusStarting, "restoring..."
 		}
 		kept = append(kept, r)

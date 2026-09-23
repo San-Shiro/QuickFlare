@@ -44,6 +44,13 @@ type Config struct {
 	// Routes is the last known route list, reconciled against Cloudflare on
 	// the next launch.
 	Routes []StoredRoute `json:"routes,omitempty"`
+
+	// RoutesDisabled is true if routes were paused/disabled when last running.
+	RoutesDisabled bool `json:"routes_disabled,omitempty"`
+
+	// RestoreLastState restores the last route state on launch when true.
+	// When false (default), routes always default to OFF on launch.
+	RestoreLastState bool `json:"restore_last_state,omitempty"`
 }
 
 // SecretsAreEncrypted reports whether the stored token gets real OS-backed
@@ -99,7 +106,7 @@ func Load() (*Config, error) {
 			// machine, cannot be decrypted here. That is the protection
 			// working, not corruption - drop the token and let the user
 			// paste a fresh one rather than failing to start.
-			return &Config{Domain: c.Domain, Routes: c.Routes}, nil
+			return &Config{Domain: c.Domain, Routes: c.Routes, RoutesDisabled: c.RoutesDisabled, RestoreLastState: c.RestoreLastState}, nil
 		}
 		c.APIToken = string(plain)
 	}

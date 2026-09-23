@@ -82,3 +82,29 @@ func TestLoadMissingFileIsNotAnError(t *testing.T) {
 		t.Error("Load should not create a file")
 	}
 }
+
+func TestRoutesDisabledAndRestoreStateRoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("APPDATA", dir)
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	c := &Config{
+		Domain:           "example.com",
+		RoutesDisabled:   true,
+		RestoreLastState: true,
+	}
+	if err := c.Save(); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+
+	got, err := Load()
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if !got.RoutesDisabled {
+		t.Errorf("RoutesDisabled not persisted: got false, want true")
+	}
+	if !got.RestoreLastState {
+		t.Errorf("RestoreLastState not persisted: got false, want true")
+	}
+}

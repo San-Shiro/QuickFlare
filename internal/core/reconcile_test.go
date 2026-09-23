@@ -29,11 +29,13 @@ func TestApplyReconcile(t *testing.T) {
 		got[r.Hostname] = r
 	}
 
-	if _, ok := got["gone.example.com"]; ok {
-		t.Error("a route absent from both DNS and ingress must be dropped")
+	if r, ok := got["gone.example.com"]; !ok {
+		t.Error("a stored route absent from Cloudflare must be kept and re-established")
+	} else if r.Status != StatusStarting {
+		t.Errorf("gone.example.com should be re-establishing, got %v", r.Status)
 	}
-	if len(got) != 4 {
-		t.Fatalf("expected 4 surviving routes, got %d: %v", len(got), keys(got))
+	if len(got) != 5 {
+		t.Fatalf("expected 5 surviving routes, got %d: %v", len(got), keys(got))
 	}
 
 	if r := got["healthy.example.com"]; r.Status != StatusConnected {
