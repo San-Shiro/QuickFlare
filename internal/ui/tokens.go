@@ -28,6 +28,7 @@ var (
 	colSuccess       = hex(0x4CC38A)
 	colWarning       = hex(0xF5B544)
 	colError         = hex(0xE5484D)
+	colErrorSubtle   = hex(0x381E20)
 )
 
 // Spacing scale, in dp.

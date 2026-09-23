@@ -662,13 +662,17 @@ func (p *Panel) connectionList(gtx layout.Context) layout.Dimensions {
 		}
 		return p.connList.Layout(gtx, len(p.routes), func(gtx layout.Context, i int) layout.Dimensions {
 			r := &p.routes[i]
+			port := extractPort(r.Target)
+			listening, hasCheck := p.isPortListening(port)
 			return p.pill(gtx, pillData{
-				host:     r.Hostname,
-				detail:   routeDetail(r),
-				status:   r.Status,
-				copyBtn:  &r.copyBtn,
-				stopBtn:  &r.stopBtn,
-				copiedAt: r.copiedAt,
+				host:          r.Hostname,
+				detail:        routeDetail(r),
+				status:        r.Status,
+				portListening: listening,
+				hasPortCheck:  hasCheck,
+				copyBtn:       &r.copyBtn,
+				stopBtn:       &r.stopBtn,
+				copiedAt:      r.copiedAt,
 			})
 		})
 	}
@@ -681,13 +685,16 @@ func (p *Panel) connectionList(gtx layout.Context) layout.Dimensions {
 	}
 	return p.connList.Layout(gtx, len(p.quicks), func(gtx layout.Context, i int) layout.Dimensions {
 		q := p.quicks[i]
+		listening, hasCheck := p.isPortListening(q.Port)
 		return p.pill(gtx, pillData{
-			host:     quickHost(q),
-			detail:   quickDetail(q),
-			status:   q.Status,
-			copyBtn:  &q.copyBtn,
-			stopBtn:  &q.stopBtn,
-			copiedAt: q.copiedAt,
+			host:          quickHost(q),
+			detail:        quickDetail(q),
+			status:        q.Status,
+			portListening: listening,
+			hasPortCheck:  hasCheck,
+			copyBtn:       &q.copyBtn,
+			stopBtn:       &q.stopBtn,
+			copiedAt:      q.copiedAt,
 		})
 	})
 }
@@ -726,12 +733,14 @@ func orPlaceholder(s, fallback string) string {
 // ---------- connection pill ----------
 
 type pillData struct {
-	host     string
-	detail   string
-	status   connStatus
-	copyBtn  *widget.Clickable
-	stopBtn  *widget.Clickable
-	copiedAt time.Time
+	host          string
+	detail        string
+	status        connStatus
+	portListening bool
+	hasPortCheck  bool
+	copyBtn       *widget.Clickable
+	stopBtn       *widget.Clickable
+	copiedAt      time.Time
 }
 
 // pill is one connection row: 48dp tall, dense enough that ten fit without
@@ -747,9 +756,14 @@ func (p *Panel) pill(gtx layout.Context, d pillData) layout.Dimensions {
 			}
 			fillRRect(gtx, gtx.Constraints.Max, rCard, bg)
 
+			dotColor := statusColor(d.status)
+			if d.status == statusConnected && d.hasPortCheck && !d.portListening {
+				dotColor = colWarning
+			}
+
 			return layout.Inset{Left: unit.Dp(sp6), Right: unit.Dp(sp4)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
-					layout.Rigid(statusDot(statusColor(d.status), dimDot)),
+					layout.Rigid(statusDot(dotColor, dimDot)),
 					layout.Rigid(hgap(sp5)),
 					layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 						// vcenterLeft wraps the whole column, not the labels
@@ -775,7 +789,7 @@ func (p *Panel) pill(gtx layout.Context, d pillData) layout.Dimensions {
 						return p.iconButton(gtx, d.copyBtn, ic, dimIconBtnList, tint)
 					}),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return p.iconButton(gtx, d.stopBtn, p.ic.stop, dimIconBtnList, colTextDisabled)
+						return p.iconButton(gtx, d.stopBtn, p.ic.delete, dimIconBtnList, colError)
 					}),
 				)
 			})
@@ -788,12 +802,16 @@ func (p *Panel) pillDetail(d pillData, copied bool) layout.Widget {
 		return p.mono("copied to clipboard", tsPillTarget, wRegular, colSuccess)
 	}
 	tone := colTextMuted
+	text := d.detail
 	if d.status == statusError {
 		tone = colError
 	} else if d.status == statusStarting {
 		tone = colWarning
+	} else if d.status == statusConnected && d.hasPortCheck && !d.portListening {
+		tone = colWarning
+		text = d.detail + " · no service listening"
 	}
-	return p.mono(d.detail, tsPillTarget, wRegular, tone)
+	return p.mono(text, tsPillTarget, wRegular, tone)
 }
 
 // emptyState fills the list area when there is nothing to show.

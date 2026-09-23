@@ -21,6 +21,7 @@ import (
 type iconSet struct {
 	copy     *widget.Icon
 	stop     *widget.Icon
+	delete   *widget.Icon
 	add      *widget.Icon
 	settings *widget.Icon
 	close    *widget.Icon
@@ -42,6 +43,7 @@ func newIcons() *iconSet {
 	return &iconSet{
 		copy:     must(icons.ContentContentCopy),
 		stop:     must(icons.AVStop),
+		delete:   must(icons.ActionDelete),
 		add:      must(icons.ContentAdd),
 		settings: must(icons.ActionSettings),
 		close:    must(icons.NavigationClose),
@@ -258,7 +260,11 @@ func (p *Panel) iconButton(gtx layout.Context, c *widget.Clickable, ic *widget.I
 
 	return c.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		if c.Hovered() {
-			fillRRect(gtx, gtx.Constraints.Max, rControl, colSurfaceRaised)
+			bg := colSurfaceRaised
+			if tint == colError {
+				bg = colErrorSubtle
+			}
+			fillRRect(gtx, gtx.Constraints.Max, rControl, bg)
 		}
 		return centered(gtx, func(gtx layout.Context) layout.Dimensions {
 			glyph := gtx.Dp(unit.Dp(sizeDp - 2*iconGlyphInset))

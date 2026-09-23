@@ -81,6 +81,7 @@ func (p *Panel) applyReconcile(stored []core.Route, states map[string]*core.Stat
 	for _, r := range repair {
 		p.provisionRoute(r.Hostname, r.Target)
 	}
+	p.triggerPortProbe()
 }
 
 // reconcileSummary is one short line for a strip one line tall.

@@ -236,6 +236,10 @@ type Panel struct {
 	portEd    widget.Editor
 	createBtn widget.Clickable
 	cancelBtn widget.Clickable
+
+	// Live port reachability cache
+	portsMu        sync.RWMutex
+	portsListening map[int]bool
 }
 
 const (
@@ -515,6 +519,7 @@ func (p *Panel) showPanel(h uintptr) {
 	Focus(h)
 	p.w.Invalidate()
 	p.fadeTo(h, 255, nil)
+	p.triggerPortProbe()
 }
 
 // hidePanel fades the panel out and then hides it.
@@ -778,6 +783,7 @@ func (p *Panel) handleInput(gtx layout.Context) {
 				// needs no separate click: publish DNS and ingress now
 				// rather than leaving the row as UI-only intent.
 				p.provisionRoute(r.Hostname, r.Target)
+				p.triggerPortProbe()
 			}
 		}
 	}
@@ -794,6 +800,7 @@ func (p *Panel) handleMainInput(gtx layout.Context) {
 		if p.segBtns[i].Clicked(gtx) {
 			p.mode = i
 			p.domainOpen = false
+			p.triggerPortProbe()
 		}
 	}
 	if p.domainBtn.Clicked(gtx) {
@@ -1146,6 +1153,8 @@ func (p *Panel) startQuick(port int) {
 	p.setStatus("Opening a quick tunnel...", colWarning)
 	p.view = viewMain
 
+	p.triggerPortProbe()
+
 	binPath := p.binPath
 	go func() {
 		q, err := supervisor.StartQuick(ctx, binPath, port)
@@ -1160,6 +1169,7 @@ func (p *Panel) startQuick(port int) {
 			entry.URL = q.URL()
 			entry.Status = statusConnected
 			p.setStatus("Quick tunnel open", colSuccess)
+			p.triggerPortProbe()
 		})
 	}()
 }
@@ -1217,6 +1227,73 @@ func (p *Panel) Shutdown() {
 			f()
 		}
 	})
+}
+
+// isPortListening returns whether a local service is listening on port, and
+// whether that port has been probed at least once.
+func (p *Panel) isPortListening(port int) (listening bool, checked bool) {
+	if port <= 0 {
+		return false, false
+	}
+	p.portsMu.RLock()
+	defer p.portsMu.RUnlock()
+	if p.portsListening == nil {
+		return false, false
+	}
+	listening, checked = p.portsListening[port]
+	return listening, checked
+}
+
+// triggerPortProbe checks all configured routes and active quick tunnels
+// asynchronously on-demand (e.g. when panel is opened/focused, or when
+// routes/quicks are added). It dials each port once with a short timeout.
+func (p *Panel) triggerPortProbe() {
+	p.mu.Lock()
+	var ports []int
+	seen := make(map[int]bool)
+	for i := range p.routes {
+		port := extractPort(p.routes[i].Target)
+		if port > 0 && !seen[port] {
+			seen[port] = true
+			ports = append(ports, port)
+		}
+	}
+	for i := range p.quicks {
+		port := p.quicks[i].Port
+		if port > 0 && !seen[port] {
+			seen[port] = true
+			ports = append(ports, port)
+		}
+	}
+	p.mu.Unlock()
+
+	if len(ports) == 0 {
+		return
+	}
+
+	go func() {
+		results := make(map[int]bool, len(ports))
+		for _, port := range ports {
+			results[port] = checkPortListening(port)
+		}
+
+		p.portsMu.Lock()
+		changed := false
+		if p.portsListening == nil {
+			p.portsListening = make(map[int]bool)
+		}
+		for port, listening := range results {
+			if cur, ok := p.portsListening[port]; !ok || cur != listening {
+				p.portsListening[port] = listening
+				changed = true
+			}
+		}
+		p.portsMu.Unlock()
+
+		if changed {
+			p.dispatch(func() {})
+		}
+	}()
 }
 
 // parsePort and validateLabel forward to core so the CLI and the panel
