@@ -4,7 +4,6 @@ import (
 	"image"
 	"testing"
 
-	"gioui.org/font/gofont"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/text"
@@ -137,7 +136,7 @@ func TestPillColumnIsCentredInItsRow(t *testing.T) {
 // fitting, centring is not the fix - the pill needs to be taller.
 func TestPillColumnLeavesRoomToCentre(t *testing.T) {
 	th := material.NewTheme()
-	th.Shaper = text.NewShaper(text.WithCollection(gofont.Collection()))
+	th.Shaper = text.NewShaper(text.WithCollection(loadFontCollection()))
 	p := &Panel{th: th, ic: newIcons()}
 
 	// Covers the usual Windows display scalings: 100%, 125%, 150%, 200%.

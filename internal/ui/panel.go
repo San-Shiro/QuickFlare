@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"gioui.org/app"
-	"gioui.org/font/gofont"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
@@ -282,7 +281,7 @@ const (
 
 func NewPanel() *Panel {
 	th := material.NewTheme()
-	th.Shaper = text.NewShaper(text.WithCollection(gofont.Collection()))
+	th.Shaper = text.NewShaper(text.WithCollection(loadFontCollection()))
 	th.Palette = material.Palette{
 		Bg:         colBackground,
 		Fg:         colTextPrimary,

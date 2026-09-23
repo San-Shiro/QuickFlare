@@ -7,14 +7,14 @@ QuickFlare is a lightweight Windows tray application that exposes local network 
 ## 1. Installation
 
 ### Installer (Recommended)
-Download **`QuickFlare-0.3.1-x64.msi`** from the [Releases](https://github.com/San-Shiro/QuickFlare/releases) page.
+Download **`QuickFlare-0.3.3-x64.msi`** from the [Releases](https://github.com/San-Shiro/QuickFlare/releases) page.
 - Per-user installation (no administrator privileges required).
 - Places a shortcut in your Start Menu.
 - Registers `quickflare` in Windows Run (`Win + R -> quickflare`).
 - Includes the inbuilt Cloudflare Tunnel engine directly.
 
 ### Portable Executable
-Download **`QuickFlare-0.3.1.exe`** from the [Releases](https://github.com/San-Shiro/QuickFlare/releases) page.
+Download **`QuickFlare-0.3.3.exe`** from the [Releases](https://github.com/San-Shiro/QuickFlare/releases) page.
 - Standalone portable binary with zero external dependencies.
 - Automatically initializes and manages the inbuilt Cloudflare Tunnel engine.
 

@@ -15,6 +15,28 @@ import (
 	"github.com/San-Shiro/QuickFlare/internal/core"
 )
 
+func TestLoadFontCollection(t *testing.T) {
+	col := loadFontCollection()
+	if len(col) == 0 {
+		t.Fatal("loadFontCollection returned empty collection")
+	}
+	var hasInter, hasMono bool
+	for _, ff := range col {
+		if ff.Font.Typeface == "Inter" {
+			hasInter = true
+		}
+		if ff.Font.Typeface == faceMono {
+			hasMono = true
+		}
+	}
+	if !hasInter {
+		t.Errorf("collection missing Inter font face")
+	}
+	if !hasMono {
+		t.Errorf("collection missing %s font face", faceMono)
+	}
+}
+
 func TestPushOpacityAndRecord(t *testing.T) {
 	var ops op.Ops
 	gtx := layout.Context{

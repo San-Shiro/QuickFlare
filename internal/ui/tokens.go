@@ -107,10 +107,8 @@ const (
 )
 
 // faceMono is the typeface used for hostnames and ports, where column
-// alignment and character distinction matter more than warmth. The design
-// specifies IBM Plex Mono; Go Mono stands in until the Plex faces are
-// embedded, since Gio needs TTF/OTF and the design bundle ships woff2.
-const faceMono font.Typeface = "Go Mono"
+// alignment and character distinction matter more than warmth.
+const faceMono font.Typeface = "JetBrains Mono"
 
 func hex(v uint32) color.NRGBA {
 	return color.NRGBA{

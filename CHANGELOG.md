@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.3.3 - 2026-09-23
+
+- **Typography** — Embedded Inter and JetBrains Mono fonts for enhanced readability across all views.
+- **Route Controls** — One-click pause/resume toggle with tray icon indicator and automatic route self-healing.
+- **UI Enhancements** — Confirmation modal overlay for route deletion, active configuration spinner, and page fade transitions.
+- **Linux Packages (Untested)** — Added CLI and packages for Linux (.deb, .rpm, .tar.gz, standalone binaries) (untested).
+
 ## v0.3.2-dev - 2026-09-23
 
 Pre-release adding Linux support alongside Windows binaries.
