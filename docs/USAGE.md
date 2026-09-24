@@ -26,12 +26,24 @@ Download **`quickflare-0.3.3-windows-amd64.exe`** from the [Releases](https://gi
 
 ---
 
-## 2. Uninstallation
+## 2. Uninstallation & Reinstallation
 
-QuickFlare provides three clean ways to uninstall:
+QuickFlare provides clean ways to uninstall or reinstall:
 1. **Uninstaller File**: Open `%LOCALAPPDATA%\QuickFlare` and double-click `uninstall.cmd`.
 2. **Command Line**: Run `quickflare uninstall` (or `quickflare uninstall --yes`) in `cmd.exe` or PowerShell.
 3. **Start Menu / Windows Settings**: Click **Uninstall QuickFlare** in the Start Menu or use **Windows Settings** -> **Installed Apps**.
+
+### Uninstallation Options:
+- **Active Route Teardown**: Prompts to remove active routes from Cloudflare (`[Y/n]`, default: enabled). When confirmed, gracefully deletes DNS CNAME records and tunnel ingress rules.
+- **Config & Secret Cleanup**: Prompts to remove configuration files and stored API tokens from `%APPDATA%\QuickFlare` (`[Y/n]`, default: enabled).
+- **Flags**:
+  - `quickflare uninstall -y`: Non-interactive uninstall (defaults to tearing down active routes and deleting configs).
+  - `quickflare uninstall --keep-routes`: Uninstall while preserving Cloudflare DNS records and tunnel routes.
+  - `quickflare uninstall --keep-config`: Uninstall while preserving `%APPDATA%\QuickFlare` settings and tokens.
+
+### Reinstallation:
+- `quickflare reinstall`: Detects existing QuickFlare installation, uninstalls the current version cleanly, and reinstalls from the latest installer.
+- `quickflare install`: Installs QuickFlare; if already present, automatically uninstalls the current version first then reinstalls.
 
 ---
 
@@ -123,7 +135,11 @@ quickflare quick --port 8080
 quickflare path status
 quickflare path install
 
-:: Clean uninstallation
+:: Install or reinstall (uninstalls current first if present)
+quickflare install
+quickflare reinstall
+
+:: Clean uninstallation (prompts to remove Cloudflare routes and configs)
 quickflare uninstall
 ```
 Changes made via the CLI automatically synchronize in real time with the running tray UI.

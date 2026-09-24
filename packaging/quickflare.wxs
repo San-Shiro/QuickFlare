@@ -49,6 +49,10 @@
       <Directory Id="AppShortcutFolder" Name="QuickFlare" />
     </StandardDirectory>
 
+    <StandardDirectory Id="AppDataFolder">
+      <Directory Id="ConfigFolder" Name="QuickFlare" />
+    </StandardDirectory>
+
     <ComponentGroup Id="CliComponents" Directory="INSTALLFOLDER">
       <!-- CLI executable with automatic user PATH registration -->
       <Component Id="QuickFlareCliExe" Guid="A3816B9F-841D-4E9A-B03F-8C4D6E2A1F50">
@@ -99,6 +103,15 @@
         <RemoveFolder Id="RemoveInstallFolder" Directory="INSTALLFOLDER" On="uninstall" />
         <RegistryValue Root="HKCU" Key="Software\QuickFlare"
                        Name="engine" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+
+      <!-- Configuration and saved tokens cleanup on full uninstall (preserved on upgrade) -->
+      <Component Id="CleanupConfig" Guid="5B3E8C1A-2D4F-4E90-A71C-6D9E2F4A1B38"
+                 Directory="ConfigFolder" Condition="NOT UPGRADINGPRODUCTCODE">
+        <RemoveFile Id="RemoveConfigFiles" Name="*" On="uninstall" />
+        <RemoveFolder Id="RemoveConfigFolder" Directory="ConfigFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\QuickFlare"
+                       Name="cleanup_config" Type="integer" Value="1" KeyPath="yes" />
       </Component>
     </ComponentGroup>
 

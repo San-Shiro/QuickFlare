@@ -44,6 +44,8 @@ usage: quickflare <command> [flags]
   status              token, domain, connector, route, and tray state
   reconcile           re-check stored routes against Cloudflare
   path                install or manage quickflare in Windows PATH
+  install             install QuickFlare (uninstalls current first if present)
+  reinstall           uninstall current version if present and reinstall
   uninstall           uninstall QuickFlare from this machine
 
 Run 'quickflare <command> -h' for the flags a command takes.
@@ -91,6 +93,10 @@ func main() {
 		err = cmdReconcile(ctx, args)
 	case "path":
 		err = cmdPath(ctx, args)
+	case "install":
+		err = cmdInstall(ctx, args)
+	case "reinstall":
+		err = cmdReinstall(ctx, args)
 	case "uninstall":
 		err = cmdUninstall(ctx, args)
 	case "help", "-h", "--help":
