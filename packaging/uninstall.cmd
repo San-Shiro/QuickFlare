@@ -37,6 +37,7 @@ for /f "tokens=2*" %%a in ('reg query "HKCU\Software\QuickFlare" /v ProductCode 
 if not "%PRODUCT_CODE%"=="" (
     echo Found Windows Installer package (%PRODUCT_CODE%).
     echo Launching Windows uninstaller...
+    cd /d "%TEMP%"
     start "" msiexec.exe /x %PRODUCT_CODE%
     exit /b 0
 )

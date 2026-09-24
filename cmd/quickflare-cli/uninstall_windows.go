@@ -56,10 +56,11 @@ func cmdUninstall(ctx context.Context, args []string) error {
 	if prodCode != "" {
 		fmt.Printf("Launching Windows uninstaller (%s)...\n", prodCode)
 		cmd := exec.Command("msiexec.exe", "/x", prodCode)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Stdin = os.Stdin
-		return cmd.Run()
+		if err := cmd.Start(); err != nil {
+			return fmt.Errorf("launch msiexec: %w", err)
+		}
+		fmt.Println("Windows uninstaller launched. Exiting QuickFlare...")
+		return nil
 	}
 
 	// 3. Fallback for portable / non-MSI installs: clean PATH and registry
