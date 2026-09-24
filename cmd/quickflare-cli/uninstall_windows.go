@@ -229,11 +229,16 @@ func cmdUninstall(ctx context.Context, args []string) error {
 		}
 	}
 
-	// 6. Check for Windows Installer ProductCode in registry
-	prodCode, _ := getInstalledProductInfo()
+	// 6. Clean any QuickFlare entries from user PATH
+	selfPath, _ := os.Executable()
+	selfDir := filepath.Dir(selfPath)
+	prodCode, installDir := getInstalledProductInfo()
+	cleanPathEntries(selfDir, installDir, filepath.Join(os.Getenv("LOCALAPPDATA"), "QuickFlare"))
+
+	// 7. Check for Windows Installer ProductCode in registry
 	if prodCode != "" {
 		fmt.Printf("Launching Windows uninstaller (%s)...\n", prodCode)
-		cmd := exec.Command("msiexec.exe", "/x", prodCode)
+		cmd := exec.Command("msiexec.exe", "/x", prodCode, "/qb")
 		if err := cmd.Start(); err != nil {
 			return fmt.Errorf("launch msiexec: %w", err)
 		}
@@ -241,17 +246,54 @@ func cmdUninstall(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	// Fallback for portable / non-MSI installs: clean PATH and registry
+	// Fallback for portable / non-MSI installs: clean registry
 	fmt.Println("Windows Installer product code not registered. Performing direct cleanup...")
-	_ = cmdPath(ctx, []string{"remove"})
-
 	_ = registry.DeleteKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\App Paths\quickflare.exe`)
 	_ = registry.DeleteKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\App Paths\quickflare-tray.exe`)
 	_ = registry.DeleteKey(registry.CURRENT_USER, `Software\QuickFlare`)
 
-	selfPath, _ := os.Executable()
 	fmt.Printf("QuickFlare PATH and registry associations removed.\nYou may now delete the binary at: %s\n", selfPath)
 	return nil
+}
+
+func cleanPathEntries(dirs ...string) {
+	k, err := registry.OpenKey(registry.CURRENT_USER, "Environment", registry.QUERY_VALUE|registry.SET_VALUE)
+	if err != nil {
+		return
+	}
+	defer k.Close()
+
+	curPath, _, err := k.GetStringValue("Path")
+	if err != nil {
+		return
+	}
+
+	parts := strings.Split(curPath, ";")
+	var remaining []string
+	changed := false
+	for _, p := range parts {
+		trimmed := strings.TrimSpace(p)
+		if trimmed == "" {
+			continue
+		}
+		remove := false
+		for _, d := range dirs {
+			if d != "" && strings.EqualFold(trimmed, strings.TrimRight(d, `\/`)) {
+				remove = true
+				changed = true
+				break
+			}
+		}
+		if !remove {
+			remaining = append(remaining, trimmed)
+		}
+	}
+
+	if changed {
+		newVal := strings.Join(remaining, ";")
+		_ = k.SetStringValue("Path", newVal)
+		broadcastSettingChange()
+	}
 }
 
 // cmdReinstall handles 'quickflare reinstall'.
