@@ -1,0 +1,14 @@
+[package]
+name = "quickflare"
+version = "0.4.5"
+edition = "2021"
+authors = ["San-Shiro"]
+description = "QuickFlare command-line tool"
+
+[dependencies]
+quickflare-core = { path = "../quickflare-core" }
+clap = { version = "4.5", features = ["derive"] }
+tokio = { version = "1.40", features = ["full"] }
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

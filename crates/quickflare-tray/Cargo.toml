@@ -1,0 +1,21 @@
+[package]
+name = "quickflare-tray"
+version = "0.4.5"
+edition = "2021"
+authors = ["San-Shiro"]
+description = "QuickFlare System Tray Popover"
+
+[dependencies]
+quickflare-core = { path = "../quickflare-core" }
+slint = { version = "1.8", default-features = false, features = ["backend-winit", "renderer-software", "compat-1-2"] }
+tray-icon = "0.25"
+muda = "0.20"
+tokio = { version = "1.40", features = ["full"] }
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+arboard = "3.4"
+dirs = "5.0"
+
+[build-dependencies]
+slint-build = "1.8"

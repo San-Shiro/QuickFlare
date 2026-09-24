@@ -1,0 +1,379 @@
+import { Theme } from "theme.slint";
+import { ToggleSwitch } from "toggle.slint";
+import { StatusDot } from "status_dot.slint";
+
+export struct RouteItem {
+    hostname: string,
+    target: string,
+    zone_id: string,
+}
+
+export component MainWindow inherits Window {
+    title: "QuickFlare";
+    width: 380px;
+    height: 520px;
+    background: Theme.background;
+    default-font-family: "Segoe UI";
+
+    in property <bool> connected: false;
+    in property <string> domain_name: "quickflare.net";
+    in property <bool> routes_paused: false;
+    in property <[RouteItem]> routes: [];
+    in property <string> app_version: "v0.4.5";
+    in property <string> engine_version: "cloudflared v2026.9.1";
+
+    callback toggle_pause_all();
+    callback add_route(string, string);
+    callback remove_route(string);
+    callback copy_url(string);
+    callback quit();
+
+    in-out property <bool> show_add_form: false;
+
+    VerticalLayout {
+        padding: 16px;
+        spacing: 12px;
+
+        // Header
+        HorizontalLayout {
+            alignment: space-between;
+            height: 36px;
+
+            HorizontalLayout {
+                spacing: 8px;
+
+                StatusDot {
+                    connected: root.connected;
+                }
+
+                Text {
+                    text: "QuickFlare";
+                    color: Theme.text-primary;
+                    font-size: 16px;
+                    font-weight: 700;
+                    vertical-alignment: TextVerticalAlignment.center;
+                }
+
+                Text {
+                    text: root.connected ? "Active" : "Connecting...";
+                    color: root.connected ? Theme.success : Theme.text-muted;
+                    font-size: 12px;
+                    vertical-alignment: TextVerticalAlignment.center;
+                }
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+
+                Text {
+                    text: root.routes_paused ? "Paused" : "Enabled";
+                    color: root.routes_paused ? Theme.text-muted : Theme.primary;
+                    font-size: 12px;
+                    vertical-alignment: TextVerticalAlignment.center;
+                }
+
+                ToggleSwitch {
+                    checked: !root.routes_paused;
+                    toggled => {
+                        root.toggle_pause_all();
+                    }
+                }
+            }
+        }
+
+        // Domain Banner
+        Rectangle {
+            height: 32px;
+            background: Theme.surface;
+            border-radius: 6px;
+            border-width: 1px;
+            border-color: Theme.border;
+
+            HorizontalLayout {
+                padding-left: 10px;
+                padding-right: 10px;
+                alignment: space-between;
+
+                Text {
+                    text: "Active Zone";
+                    color: Theme.text-muted;
+                    font-size: 11px;
+                    vertical-alignment: TextVerticalAlignment.center;
+                }
+
+                Text {
+                    text: root.domain_name;
+                    color: Theme.text-primary;
+                    font-size: 12px;
+                    font-weight: 600;
+                    vertical-alignment: TextVerticalAlignment.center;
+                }
+            }
+        }
+
+        // Section Title & Add Button
+        HorizontalLayout {
+            alignment: space-between;
+
+            Text {
+                text: "PUBLISHED ROUTES (" + root.routes.length + ")";
+                color: Theme.text-secondary;
+                font-size: 11px;
+                font-weight: 600;
+                letter-spacing: 0.5px;
+                vertical-alignment: TextVerticalAlignment.center;
+            }
+
+            Rectangle {
+                width: 76px;
+                height: 24px;
+                background: add_touch.has-hover ? Theme.primary-hover : Theme.primary;
+                border-radius: 4px;
+                animate background { duration: 120ms; }
+
+                Text {
+                    text: root.show_add_form ? "Cancel" : "+ Add";
+                    color: #ffffff;
+                    font-size: 11px;
+                    font-weight: 600;
+                    horizontal-alignment: TextHorizontalAlignment.center;
+                    vertical-alignment: TextVerticalAlignment.center;
+                }
+
+                add_touch := TouchArea {
+                    clicked => {
+                        root.show_add_form = !root.show_add_form;
+                    }
+                }
+            }
+        }
+
+        // Add Route Form Drawer
+        if root.show_add_form: Rectangle {
+            background: Theme.surface;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: Theme.primary;
+
+            VerticalLayout {
+                padding: 12px;
+                spacing: 8px;
+
+                Text {
+                    text: "Add New Local Service";
+                    color: Theme.text-primary;
+                    font-size: 12px;
+                    font-weight: 600;
+                }
+
+                HorizontalLayout {
+                    spacing: 8px;
+
+                    subdomain_input := TextInput {
+                        width: 160px;
+                        height: 28px;
+                        text: "app";
+                        color: Theme.text-primary;
+                        font-size: 12px;
+                        vertical-alignment: TextVerticalAlignment.center;
+                    }
+
+                    port_input := TextInput {
+                        width: 70px;
+                        height: 28px;
+                        text: "3000";
+                        color: Theme.text-primary;
+                        font-size: 12px;
+                        vertical-alignment: TextVerticalAlignment.center;
+                    }
+
+                    Rectangle {
+                        background: Theme.primary;
+                        border-radius: 4px;
+
+                        Text {
+                            text: "Publish";
+                            color: #ffffff;
+                            font-size: 11px;
+                            font-weight: 600;
+                            horizontal-alignment: TextHorizontalAlignment.center;
+                            vertical-alignment: TextVerticalAlignment.center;
+                        }
+
+                        TouchArea {
+                            clicked => {
+                                root.add_route(subdomain_input.text, port_input.text);
+                                root.show_add_form = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Routes Scrollable List
+        Flickable {
+            content-height: root.routes.length * 68px;
+
+            VerticalLayout {
+                spacing: 6px;
+
+                for route in root.routes: Rectangle {
+                    height: 60px;
+                    background: card_touch.has-hover ? Theme.surface-hover : Theme.surface;
+                    border-radius: 8px;
+                    border-width: 1px;
+                    border-color: Theme.border;
+                    animate background { duration: 100ms; }
+
+                    card_touch := TouchArea {}
+
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
+                        alignment: space-between;
+
+                        VerticalLayout {
+                            spacing: 2px;
+                            alignment: LayoutAlignment.center;
+
+                            Text {
+                                text: "https://" + route.hostname;
+                                color: Theme.text-primary;
+                                font-size: 13px;
+                                font-weight: 600;
+                            }
+
+                            Text {
+                                text: "→ " + route.target;
+                                color: Theme.text-muted;
+                                font-size: 11px;
+                            }
+                        }
+
+                        HorizontalLayout {
+                            spacing: 6px;
+
+                            // Copy Link Button
+                            Rectangle {
+                                width: 28px;
+                                height: 28px;
+                                border-radius: 4px;
+                                background: copy_touch.has-hover ? #2e2e36 : #222228;
+
+                                Text {
+                                    text: "🔗";
+                                    font-size: 12px;
+                                    horizontal-alignment: TextHorizontalAlignment.center;
+                                    vertical-alignment: TextVerticalAlignment.center;
+                                }
+
+                                copy_touch := TouchArea {
+                                    clicked => {
+                                        root.copy_url("https://" + route.hostname);
+                                    }
+                                }
+                            }
+
+                            // Delete Route Button
+                            Rectangle {
+                                width: 28px;
+                                height: 28px;
+                                border-radius: 4px;
+                                background: del_touch.has-hover ? #ef444433 : #222228;
+
+                                Text {
+                                    text: "✕";
+                                    color: del_touch.has-hover ? Theme.danger : Theme.text-muted;
+                                    font-size: 12px;
+                                    font-weight: 700;
+                                    horizontal-alignment: TextHorizontalAlignment.center;
+                                    vertical-alignment: TextVerticalAlignment.center;
+                                }
+
+                                del_touch := TouchArea {
+                                    clicked => {
+                                        root.remove_route(route.hostname);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Empty state when no routes
+        if root.routes.length == 0: Rectangle {
+            height: 120px;
+            background: Theme.surface;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: Theme.border;
+
+            VerticalLayout {
+                alignment: LayoutAlignment.center;
+                spacing: 6px;
+
+                Text {
+                    text: "No active routes";
+                    color: Theme.text-primary;
+                    font-size: 13px;
+                    font-weight: 600;
+                    horizontal-alignment: TextHorizontalAlignment.center;
+                }
+
+                Text {
+                    text: "Click '+ Add' above to publish a local port";
+                    color: Theme.text-muted;
+                    font-size: 11px;
+                    horizontal-alignment: TextHorizontalAlignment.center;
+                }
+            }
+        }
+
+        // Footer
+        Rectangle {
+            height: 36px;
+            background: Theme.surface;
+            border-radius: 6px;
+            border-width: 1px;
+            border-color: Theme.border;
+
+            HorizontalLayout {
+                padding-left: 12px;
+                padding-right: 12px;
+                alignment: space-between;
+
+                Text {
+                    text: root.app_version + " • " + root.engine_version;
+                    color: Theme.text-muted;
+                    font-size: 10px;
+                    vertical-alignment: TextVerticalAlignment.center;
+                }
+
+                Rectangle {
+                    width: 44px;
+                    height: 22px;
+                    border-radius: 4px;
+                    background: quit_touch.has-hover ? #ef444433 : transparent;
+
+                    Text {
+                        text: "Quit";
+                        color: quit_touch.has-hover ? Theme.danger : Theme.text-muted;
+                        font-size: 11px;
+                        font-weight: 500;
+                        horizontal-alignment: TextHorizontalAlignment.center;
+                        vertical-alignment: TextVerticalAlignment.center;
+                    }
+
+                    quit_touch := TouchArea {
+                        clicked => {
+                            root.quit();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

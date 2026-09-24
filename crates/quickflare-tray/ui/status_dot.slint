@@ -1,0 +1,25 @@
+import { Theme } from "theme.slint";
+
+export component StatusDot {
+    in property <bool> connected: false;
+
+    width: 14px;
+    height: 14px;
+
+    halo := Rectangle {
+        width: 14px;
+        height: 14px;
+        border-radius: 7px;
+        background: root.connected ? #10b98133 : #ef444433;
+    }
+
+    core := Rectangle {
+        x: 3px;
+        y: 3px;
+        width: 8px;
+        height: 8px;
+        border-radius: 4px;
+        background: root.connected ? Theme.success : Theme.danger;
+        animate background { duration: 250ms; }
+    }
+}

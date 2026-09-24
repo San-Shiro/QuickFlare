@@ -1,0 +1,34 @@
+import { Theme } from "theme.slint";
+
+export component ToggleSwitch {
+    in-out property <bool> checked: false;
+    callback toggled();
+
+    width: 44px;
+    height: 24px;
+
+    track := Rectangle {
+        width: 100%;
+        height: 100%;
+        border-radius: 12px;
+        background: root.checked ? Theme.primary : #323238;
+        animate background { duration: 160ms; easing: ease-out; }
+
+        thumb := Rectangle {
+            width: 18px;
+            height: 18px;
+            border-radius: 9px;
+            background: #ffffff;
+            x: root.checked ? root.width - self.width - 3px : 3px;
+            y: (root.height - self.height) / 2;
+            animate x { duration: 180ms; easing: cubic-bezier(0.16, 1, 0.3, 1); }
+        }
+    }
+
+    TouchArea {
+        clicked => {
+            root.checked = !root.checked;
+            root.toggled();
+        }
+    }
+}

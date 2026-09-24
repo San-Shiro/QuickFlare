@@ -1,0 +1,30 @@
+[package]
+name = "quickflare-core"
+version = "0.4.5"
+edition = "2021"
+authors = ["San-Shiro"]
+description = "Core tunnel supervision, Cloudflare API, and configuration for QuickFlare"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.40", features = ["rt-multi-thread", "macros", "process", "sync", "time", "io-util", "fs"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+flate2 = "1.0"
+dirs = "5.0"
+thiserror = "1.0"
+tracing = "0.1"
+anyhow = "1.0"
+base64 = "0.22"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = [
+    "Win32_Security_Cryptography",
+    "Win32_System_JobObjects",
+    "Win32_System_Threading",
+    "Win32_Foundation",
+    "Win32_System_Pipes",
+    "Win32_Storage_FileSystem",
+    "Win32_System_IO",
+    "Win32_System_Memory",
+] }
