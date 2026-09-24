@@ -39,12 +39,14 @@ go build -ldflags "-H windowsgui -s -w" -o "build/quickflare-tray.exe" ./cmd/qui
 go build -ldflags "-s -w" -o "build/quickflare.exe" ./cmd/quickflare-cli
 cp -f "build/quickflare.exe" "build/quickflare-$MSI_VERSION-windows-amd64.exe"
 
-# Build self-contained modern GUI setup installer
-mkdir -p cmd/quickflare-installer/payload
-cp -f "build/quickflare.exe" cmd/quickflare-installer/payload/quickflare.exe
-cp -f "build/quickflare-tray.exe" cmd/quickflare-installer/payload/quickflare-tray.exe
-go build -ldflags "-H windowsgui -s -w" -o "build/QuickFlare-Setup.exe" ./cmd/quickflare-installer
-cp -f "build/QuickFlare-Setup.exe" "build/QuickFlare-$MSI_VERSION-Setup.exe"
+# Build native Windows setup installer using Inno Setup (LZMA2 ultra64 solid compression)
+ISCC="$(cygpath -u "$LOCALAPPDATA" 2>/dev/null)/Programs/Inno Setup 6/iscc.exe"
+[ -f "$ISCC" ] || ISCC="C:/Program Files (x86)/Inno Setup 6/iscc.exe"
+[ -f "$ISCC" ] || ISCC="$(which iscc.exe 2>/dev/null || which iscc 2>/dev/null || echo "iscc")"
+
+echo "==> Compiling native Inno Setup installer for $TAG"
+MSYS_NO_PATHCONV=1 "$ISCC" /DVersion="$MSI_VERSION" packaging/quickflare.iss
+cp -f "build/QuickFlare-$MSI_VERSION-Setup.exe" "build/QuickFlare-Setup.exe"
 
 # Package portable ZIP containing CLI and Tray (no tray-only option)
 powershell -Command "Compress-Archive -Path build/quickflare.exe, build/quickflare-tray.exe, packaging/uninstall.cmd -DestinationPath build/QuickFlare-$MSI_VERSION-windows-portable.zip -Force"

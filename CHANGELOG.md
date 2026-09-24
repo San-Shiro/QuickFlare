@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.4.5 - 2026-09-24
+
+- **Native Setup Engine** — Replaced bloated Go setup wizard with native Inno Setup 6 compiler using ultra64 solid LZMA2 compression, reducing installer size by 65% from 71 MB to 24 MB.
+- **Zero Go Runtime Overhead in Setup** — Native C/C++ installer engine runs instantly, deduplicates cross-binary data blocks, and eliminates redundant GPU/GUI framework overhead.
+- **Graceful Uninstallation Prompt** — Native uninstaller prompts to gracefully unpublish active Cloudflare routes via API before removing local files.
+- **Environment & PATH** — Automatically registers QuickFlare in User `PATH` with instant `WM_SETTINGCHANGE` broadcast for immediate terminal availability.
+- **Flexible Experience Tasks** — Choose between "CLI with System Tray (Recommended)" and "CLI Only" (strictly enforcing no tray-only mode).
+
 ## v0.4.0 - 2026-09-24
 
 - **Modern Setup GUI** — Added branded Go + Gio standalone installer (`QuickFlare-Setup.exe`) with dark theme and Windows DWM immersive title bar.

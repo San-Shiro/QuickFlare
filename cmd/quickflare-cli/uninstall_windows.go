@@ -16,6 +16,7 @@ import (
 	"golang.org/x/sys/windows/registry"
 
 	"github.com/San-Shiro/QuickFlare/internal/config"
+	"github.com/San-Shiro/QuickFlare/internal/core"
 	"github.com/San-Shiro/QuickFlare/internal/installer"
 )
 
@@ -34,6 +35,9 @@ func getInstalledProductInfo() (string, string) {
 // findInstaller searches common locations for QuickFlare-Setup.exe or MSI.
 func findInstaller() string {
 	candidates := []string{
+		"QuickFlare-*-Setup.exe",
+		"build/QuickFlare-*-Setup.exe",
+		"../build/QuickFlare-*-Setup.exe",
 		"QuickFlare-Setup.exe",
 		"build/QuickFlare-Setup.exe",
 		"../QuickFlare-Setup.exe",
@@ -43,6 +47,7 @@ func findInstaller() string {
 	}
 	if userProfile := os.Getenv("USERPROFILE"); userProfile != "" {
 		candidates = append(candidates,
+			filepath.Join(userProfile, "Downloads", "QuickFlare-*-Setup.exe"),
 			filepath.Join(userProfile, "Downloads", "QuickFlare-Setup.exe"),
 			filepath.Join(userProfile, "Downloads", "QuickFlare-*.msi"),
 		)
@@ -91,8 +96,23 @@ func cmdUninstall(ctx context.Context, args []string) error {
 	keepRoutes := fs.Bool("keep-routes", false, "do not remove active Cloudflare routes")
 	keepConfig := fs.Bool("keep-config", false, "preserve configuration and saved tokens")
 	reinstall := fs.Bool("reinstall", false, "uninstall current version then reinstall")
+	routesOnly := fs.Bool("routes-only", false, "teardown and unpublish active Cloudflare routes only")
 	msiPath := fs.String("msi", "", "path to installer MSI for reinstall")
 	fs.Parse(args)
+
+	if *routesOnly {
+		s, err := open()
+		if err == nil && s != nil && len(s.cfg.Routes) > 0 {
+			if err := s.withTunnel(ctx); err == nil {
+				for _, r := range s.routes() {
+					_ = core.Unpublish(ctx, s.client, r.ZoneID, s.tunnelID, r.Hostname)
+				}
+				s.cfg.Routes = nil
+				_ = s.cfg.Save()
+			}
+		}
+		return nil
+	}
 
 	if *reinstall {
 		var reinstallArgs []string

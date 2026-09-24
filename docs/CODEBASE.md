@@ -68,7 +68,7 @@ User interface built with [Gio](https://gioui.org):
 
 ### Building the Portable Binary
 ```powershell
-go build -ldflags "-H windowsgui -s -w" -o build/QuickFlare-0.4.0.exe ./cmd/quickflare
+go build -ldflags "-H windowsgui -s -w" -o build/QuickFlare-0.4.5.exe ./cmd/quickflare
 ```
 
 ### Running Tests
@@ -77,7 +77,12 @@ go vet ./...
 go test -v ./...
 ```
 
+### Building the Native Installer (Inno Setup)
+```powershell
+iscc /DVersion=0.4.5 packaging/quickflare.iss
+```
+
 ### Building the MSI Installer
 ```powershell
-wix build packaging/quickflare.wxs -b . -d Version=0.4.0 -o build/QuickFlare-0.4.0-x64.msi
+wix build packaging/quickflare.wxs -b . -d Version=0.4.5 -o build/QuickFlare-0.4.5-x64.msi
 ```

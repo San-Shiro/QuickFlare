@@ -7,7 +7,7 @@
 **Publish localhost to the internet through Cloudflare Tunnel with cloudflared.**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/badge/release-v0.4.0-F6821F.svg)](https://github.com/San-Shiro/QuickFlare/releases)
+[![Release](https://img.shields.io/badge/release-v0.4.5-F6821F.svg)](https://github.com/San-Shiro/QuickFlare/releases)
 
 </div>
 
@@ -29,19 +29,19 @@ there is nothing else to install.
 
 | File | |
 |---|---|
-| `QuickFlare-0.4.0-Setup.exe` | **Modern GUI Installer** (Recommended): branded setup wizard, choose CLI+Tray or CLI-only, auto-configures PATH and Start Menu |
-| `QuickFlare-0.4.0-x64.msi` | Windows Installer (MSI): enterprise / silent installs |
-| `QuickFlare-0.4.0-windows-portable.zip` | Portable bundle (CLI + Tray) |
-| `quickflare-0.4.0-windows-amd64.exe` | Standalone CLI only |
+| `QuickFlare-0.4.5-Setup.exe` | **Native Setup Installer** (Recommended, ~24 MB): ultra-compact native installer, choose CLI+Tray or CLI-only, auto-configures PATH and Start Menu |
+| `QuickFlare-0.4.5-x64.msi` | Windows Installer (MSI): enterprise / silent installs |
+| `QuickFlare-0.4.5-windows-portable.zip` | Portable bundle (CLI + Tray) |
+| `quickflare-0.4.5-windows-amd64.exe` | Standalone CLI only |
 
 **Linux** — command line only, and currently a preview. See
 [Linux](#linux-preview) below.
 
 | File | |
 |---|---|
-| `quickflare_0.4.0_amd64.deb` | Debian, Ubuntu, Mint |
-| `quickflare-0.4.0.x86_64.rpm` | Fedora, RHEL, openSUSE |
-| `quickflare-0.4.0-linux-amd64.tar.gz` | Any distribution |
+| `quickflare_0.4.5_amd64.deb` | Debian, Ubuntu, Mint |
+| `quickflare-0.4.5.x86_64.rpm` | Fedora, RHEL, openSUSE |
+| `quickflare-0.4.5-linux-amd64.tar.gz` | Any distribution |
 
 `arm64` builds of each are published alongside.
 
@@ -108,7 +108,7 @@ Two things to know before using it:
 
 ```bash
 # Windows tray app
-go build -ldflags "-H windowsgui -s -w" -o build/QuickFlare-0.4.0.exe ./cmd/quickflare
+go build -ldflags "-H windowsgui -s -w" -o build/QuickFlare-0.4.5.exe ./cmd/quickflare
 
 # Linux CLI - cross-compiles from anywhere, no cgo
 GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o build/quickflare ./cmd/quickflare-cli
