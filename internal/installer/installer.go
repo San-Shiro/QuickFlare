@@ -6,7 +6,7 @@ import (
 )
 
 // Version is the current application version.
-const Version = "0.3.3"
+const Version = "0.4.0"
 
 // Options specifies what the installer or uninstaller should do.
 type Options struct {

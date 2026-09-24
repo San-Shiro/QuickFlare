@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.4.0 - 2026-09-24
+
+- **Modern Setup GUI** — Added branded Go + Gio standalone installer (`QuickFlare-Setup.exe`) with dark theme and Windows DWM immersive title bar.
+- **Experience Selection** — Choose between "CLI with System Tray (Recommended)" and "CLI Only" (strict invariant: no tray-only option).
+- **Graceful Route Teardown** — Uninstaller prompts to gracefully unpublish active Cloudflare routes via API (default: enabled) and remove local credentials.
+- **Environment & Shortcuts** — Automated user PATH registration with instant shell broadcast, Start Menu shortcuts, and Apps & Features integration.
+- **CLI Command Integration** — Modernized `quickflare install` and `quickflare reinstall` to auto-detect and run the modern setup wizard.
+
 ## v0.3.3 - 2026-09-23
 
 - **Typography** — Embedded Inter and JetBrains Mono fonts for enhanced readability across all views.

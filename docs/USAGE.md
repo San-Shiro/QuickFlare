@@ -7,7 +7,7 @@ QuickFlare is a lightweight Windows tray application that exposes local network 
 ## 1. Installation
 
 ### Modern GUI Installer (Recommended)
-Download **`QuickFlare-0.3.3-Setup.exe`** from the [Releases](https://github.com/San-Shiro/QuickFlare/releases) page.
+Download **`QuickFlare-0.4.0-Setup.exe`** from the [Releases](https://github.com/San-Shiro/QuickFlare/releases) page.
 - Branded, modern dark-themed setup wizard.
 - Experience selection: **CLI with System Tray (Recommended)** or **CLI Only** (strict invariant: no tray-only install).
 - Per-user installation to `%LOCALAPPDATA%\QuickFlare` (no administrator privileges required).
@@ -17,15 +17,15 @@ Download **`QuickFlare-0.3.3-Setup.exe`** from the [Releases](https://github.com
 - Built-in clean uninstallation that prompts to gracefully unpublish active Cloudflare routes via API (default: enabled) and remove local credentials.
 
 ### Windows Installer (MSI)
-Download **`QuickFlare-0.3.3-x64.msi`** from the [Releases](https://github.com/San-Shiro/QuickFlare/releases) page for enterprise or automated GPO deployments.
+Download **`QuickFlare-0.4.0-x64.msi`** from the [Releases](https://github.com/San-Shiro/QuickFlare/releases) page for enterprise or automated GPO deployments.
 
 ### Portable Package (CLI + Tray)
-Download **`QuickFlare-0.3.3-windows-portable.zip`** from the [Releases](https://github.com/San-Shiro/QuickFlare/releases) page.
+Download **`QuickFlare-0.4.0-windows-portable.zip`** from the [Releases](https://github.com/San-Shiro/QuickFlare/releases) page.
 - Portable bundle containing `quickflare.exe`, `quickflare-tray.exe`, and `uninstall.cmd`.
 - Extract to any folder. Run `quickflare path install` to register into user `PATH`.
 
 ### Standalone CLI Only
-Download **`quickflare-0.3.3-windows-amd64.exe`** from the [Releases](https://github.com/San-Shiro/QuickFlare/releases) page.
+Download **`quickflare-0.4.0-windows-amd64.exe`** from the [Releases](https://github.com/San-Shiro/QuickFlare/releases) page.
 - Lightweight standalone terminal binary for headless or script-driven environments.
 
 ---
