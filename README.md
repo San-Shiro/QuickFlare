@@ -29,7 +29,8 @@ there is nothing else to install.
 
 | File | |
 |---|---|
-| `QuickFlare-0.3.3-x64.msi` | Installer: per-user, auto-configures installation directory, PATH, and uninstaller (CLI + Tray or CLI only) |
+| `QuickFlare-0.3.3-Setup.exe` | **Modern GUI Installer** (Recommended): branded setup wizard, choose CLI+Tray or CLI-only, auto-configures PATH and Start Menu |
+| `QuickFlare-0.3.3-x64.msi` | Windows Installer (MSI): enterprise / silent installs |
 | `QuickFlare-0.3.3-windows-portable.zip` | Portable bundle (CLI + Tray) |
 | `quickflare-0.3.3-windows-amd64.exe` | Standalone CLI only |
 

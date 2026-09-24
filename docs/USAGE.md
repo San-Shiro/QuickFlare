@@ -6,14 +6,18 @@ QuickFlare is a lightweight Windows tray application that exposes local network 
 
 ## 1. Installation
 
-### Windows Installer (Recommended)
-Download **`QuickFlare-0.3.3-x64.msi`** from the [Releases](https://github.com/San-Shiro/QuickFlare/releases) page.
+### Modern GUI Installer (Recommended)
+Download **`QuickFlare-0.3.3-Setup.exe`** from the [Releases](https://github.com/San-Shiro/QuickFlare/releases) page.
+- Branded, modern dark-themed setup wizard.
+- Experience selection: **CLI with System Tray (Recommended)** or **CLI Only** (strict invariant: no tray-only install).
 - Per-user installation to `%LOCALAPPDATA%\QuickFlare` (no administrator privileges required).
-- Automatically configures user `PATH` environment variable so `quickflare` is instantly available in `cmd.exe` and PowerShell.
-- Feature selection: **CLI & Engine** (mandatory core) and **System Tray & UI** (optional). No tray-only install is permitted.
-- Includes `uninstall.cmd` directly in the installation folder.
+- Automatically registers the install directory into user `PATH` environment variable so `quickflare` is instantly available in CMD and PowerShell.
 - Creates Start Menu shortcuts for **QuickFlare** and **Uninstall QuickFlare**.
-- Registers `quickflare` in Windows Run (`Win + R -> quickflare`).
+- Registers `quickflare` in Windows Run (`Win + R -> quickflare`) and Windows Apps & Features (`Settings -> Apps -> Installed apps`).
+- Built-in clean uninstallation that prompts to gracefully unpublish active Cloudflare routes via API (default: enabled) and remove local credentials.
+
+### Windows Installer (MSI)
+Download **`QuickFlare-0.3.3-x64.msi`** from the [Releases](https://github.com/San-Shiro/QuickFlare/releases) page for enterprise or automated GPO deployments.
 
 ### Portable Package (CLI + Tray)
 Download **`QuickFlare-0.3.3-windows-portable.zip`** from the [Releases](https://github.com/San-Shiro/QuickFlare/releases) page.

@@ -12,13 +12,11 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 
 	"golang.org/x/sys/windows/registry"
 
 	"github.com/San-Shiro/QuickFlare/internal/config"
-	"github.com/San-Shiro/QuickFlare/internal/core"
-	"github.com/San-Shiro/QuickFlare/internal/ipc"
+	"github.com/San-Shiro/QuickFlare/internal/installer"
 )
 
 // getInstalledProductInfo reads the MSI ProductCode and InstallDir from HKCU\Software\QuickFlare.
@@ -33,41 +31,21 @@ func getInstalledProductInfo() (string, string) {
 	return prodCode, installDir
 }
 
-// unpublishAllActiveRoutes connects to Cloudflare and unpublishes each active route.
-func unpublishAllActiveRoutes(ctx context.Context) error {
-	s, err := open()
-	if err != nil {
-		return err
-	}
-	routes := s.routes()
-	if len(routes) == 0 {
-		return nil
-	}
-	if err := s.withTunnel(ctx); err != nil {
-		return fmt.Errorf("connect to tunnel: %w", err)
-	}
-
-	for _, r := range routes {
-		fmt.Printf("Unpublishing route %s from Cloudflare...\n", r.Hostname)
-		problems := core.Unpublish(ctx, s.client, r.ZoneID, s.tunnelID, r.Hostname)
-		for _, p := range problems {
-			fmt.Fprintf(os.Stderr, "  %s: %s\n", r.Hostname, p)
-		}
-	}
-	_ = s.saveRoutes(nil)
-	notifyTrayReload(ctx)
-	return nil
-}
-
-// findInstallerMSI searches common locations for the QuickFlare MSI installer.
-func findInstallerMSI() string {
+// findInstaller searches common locations for QuickFlare-Setup.exe or MSI.
+func findInstaller() string {
 	candidates := []string{
+		"QuickFlare-Setup.exe",
+		"build/QuickFlare-Setup.exe",
+		"../QuickFlare-Setup.exe",
 		"QuickFlare-*.msi",
 		"build/QuickFlare-*.msi",
 		"../QuickFlare-*.msi",
 	}
 	if userProfile := os.Getenv("USERPROFILE"); userProfile != "" {
-		candidates = append(candidates, filepath.Join(userProfile, "Downloads", "QuickFlare-*.msi"))
+		candidates = append(candidates,
+			filepath.Join(userProfile, "Downloads", "QuickFlare-Setup.exe"),
+			filepath.Join(userProfile, "Downloads", "QuickFlare-*.msi"),
+		)
 	}
 
 	for _, pattern := range candidates {
@@ -87,47 +65,22 @@ func findInstallerMSI() string {
 	return ""
 }
 
-// launchDetachedReinstall writes a temporary script in %TEMP% and runs it detached.
-func launchDetachedReinstall(prodCode, msiPath string) error {
-	tempDir := os.TempDir()
-	batchPath := filepath.Join(tempDir, "quickflare-reinstall.cmd")
-
-	script := fmt.Sprintf(`@echo off
-setlocal
-title QuickFlare Reinstaller
-echo ======================================================
-echo              QuickFlare Reinstall
-echo ======================================================
-echo Waiting for QuickFlare processes to close...
-timeout /t 1 /nobreak >nul
-taskkill /f /im quickflare.exe >nul 2>&1
-taskkill /f /im quickflare-tray.exe >nul 2>&1
-taskkill /f /im cloudflared.exe >nul 2>&1
-
-if not "%[1]s"=="" (
-    echo Uninstalling current version of QuickFlare...
-    msiexec.exe /x %[1]s /qb
-)
-
-echo Reinstalling QuickFlare from %[2]s...
-msiexec.exe /i "%[2]s" /qb
-
-echo Reinstallation complete.
-del "%%~f0" 2>nul
-exit /b 0
-`, prodCode, msiPath)
-
-	if err := os.WriteFile(batchPath, []byte(script), 0700); err != nil {
-		return fmt.Errorf("create reinstaller script: %w", err)
+// launchInstaller launches QuickFlare-Setup.exe or falls back to msiexec for MSI.
+func launchInstaller(targetPath string) error {
+	absPath, err := filepath.Abs(targetPath)
+	if err != nil {
+		absPath = targetPath
 	}
 
-	cmd := exec.Command("cmd.exe", "/c", "start", "", batchPath)
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("launch reinstaller: %w", err)
+	if strings.HasSuffix(strings.ToLower(absPath), ".msi") {
+		fmt.Printf("Launching Windows Installer (%s)...\n", absPath)
+		cmd := exec.Command("msiexec.exe", "/i", absPath)
+		return cmd.Start()
 	}
 
-	fmt.Println("Reinstallation helper launched in background. Exiting QuickFlare...")
-	return nil
+	fmt.Printf("Launching QuickFlare Setup (%s)...\n", absPath)
+	cmd := exec.Command(absPath)
+	return cmd.Start()
 }
 
 // cmdUninstall handles 'quickflare uninstall'.
@@ -202,99 +155,29 @@ func cmdUninstall(ctx context.Context, args []string) error {
 		}
 	}
 
-	// 3. Stop running tray application if active
-	client, err := ipc.Discover()
-	if err == nil && client != nil {
-		fmt.Printf("Stopping running QuickFlare tray (PID %d)...\n", client.PID())
-		_ = client.Quit(ctx)
-		time.Sleep(500 * time.Millisecond)
+	_, installDir := getInstalledProductInfo()
+	if installDir == "" {
+		installDir = installer.DefaultInstallDir()
 	}
 
-	// 4. Gracefully remove active routes from Cloudflare if enabled
-	if removeRoutes {
-		fmt.Println("Gracefully removing active routes from Cloudflare...")
-		if err := unpublishAllActiveRoutes(ctx); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: unpublish routes from Cloudflare: %v\n", err)
-		} else {
-			fmt.Println("Active Cloudflare routes removed.")
-		}
+	opt := installer.Options{
+		InstallDir:   installDir,
+		RemoveRoutes: removeRoutes,
+		RemoveConfig: removeConfig,
 	}
 
-	// 5. Remove configuration directory if enabled
-	if removeConfig {
-		configDir, err := config.Dir()
-		if err == nil && configDir != "" {
-			_ = os.RemoveAll(configDir)
-			fmt.Println("Configuration and saved credentials removed.")
-		}
+	fmt.Println("\nStarting QuickFlare uninstallation...")
+	err := installer.Uninstall(ctx, opt, func(step string, prog float32) {
+		fmt.Printf("[%3.0f%%] %s\n", prog*100, step)
+	})
+	if err != nil {
+		return fmt.Errorf("uninstallation failed: %w", err)
 	}
 
-	// 6. Clean any QuickFlare entries from user PATH
-	selfPath, _ := os.Executable()
-	selfDir := filepath.Dir(selfPath)
-	prodCode, installDir := getInstalledProductInfo()
-	cleanPathEntries(selfDir, installDir, filepath.Join(os.Getenv("LOCALAPPDATA"), "QuickFlare"))
-
-	// 7. Check for Windows Installer ProductCode in registry
-	if prodCode != "" {
-		fmt.Printf("Launching Windows uninstaller (%s)...\n", prodCode)
-		cmd := exec.Command("msiexec.exe", "/x", prodCode, "/qb")
-		if err := cmd.Start(); err != nil {
-			return fmt.Errorf("launch msiexec: %w", err)
-		}
-		fmt.Println("Windows uninstaller launched. Exiting QuickFlare...")
-		return nil
-	}
-
-	// Fallback for portable / non-MSI installs: clean registry
-	fmt.Println("Windows Installer product code not registered. Performing direct cleanup...")
-	_ = registry.DeleteKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\App Paths\quickflare.exe`)
-	_ = registry.DeleteKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\App Paths\quickflare-tray.exe`)
-	_ = registry.DeleteKey(registry.CURRENT_USER, `Software\QuickFlare`)
-
-	fmt.Printf("QuickFlare PATH and registry associations removed.\nYou may now delete the binary at: %s\n", selfPath)
+	fmt.Println("\nQuickFlare uninstalled successfully.")
 	return nil
 }
 
-func cleanPathEntries(dirs ...string) {
-	k, err := registry.OpenKey(registry.CURRENT_USER, "Environment", registry.QUERY_VALUE|registry.SET_VALUE)
-	if err != nil {
-		return
-	}
-	defer k.Close()
-
-	curPath, _, err := k.GetStringValue("Path")
-	if err != nil {
-		return
-	}
-
-	parts := strings.Split(curPath, ";")
-	var remaining []string
-	changed := false
-	for _, p := range parts {
-		trimmed := strings.TrimSpace(p)
-		if trimmed == "" {
-			continue
-		}
-		remove := false
-		for _, d := range dirs {
-			if d != "" && strings.EqualFold(trimmed, strings.TrimRight(d, `\/`)) {
-				remove = true
-				changed = true
-				break
-			}
-		}
-		if !remove {
-			remaining = append(remaining, trimmed)
-		}
-	}
-
-	if changed {
-		newVal := strings.Join(remaining, ";")
-		_ = k.SetStringValue("Path", newVal)
-		broadcastSettingChange()
-	}
-}
 
 // cmdReinstall handles 'quickflare reinstall'.
 func cmdReinstall(ctx context.Context, args []string) error {
@@ -303,21 +186,22 @@ func cmdReinstall(ctx context.Context, args []string) error {
 	fs.BoolVar(yes, "yes", false, "confirm without interactive prompt")
 	keepRoutes := fs.Bool("keep-routes", false, "do not remove active Cloudflare routes")
 	keepConfig := fs.Bool("keep-config", false, "preserve configuration and saved credentials")
-	msiPath := fs.String("msi", "", "path to QuickFlare MSI installer")
+	installerPath := fs.String("installer", "", "path to QuickFlare-Setup.exe or MSI installer")
+	fs.StringVar(installerPath, "msi", "", "path to QuickFlare installer")
 	pos := parseFlags(fs, args)
 
-	targetMSI := *msiPath
-	if targetMSI == "" && len(pos) > 0 {
-		targetMSI = pos[0]
+	targetInstaller := *installerPath
+	if targetInstaller == "" && len(pos) > 0 {
+		targetInstaller = pos[0]
 	}
-	if targetMSI == "" {
-		targetMSI = findInstallerMSI()
+	if targetInstaller == "" {
+		targetInstaller = findInstaller()
 	}
 
-	prodCode, installDir := getInstalledProductInfo()
+	_, installDir := getInstalledProductInfo()
 	reader := bufio.NewReader(os.Stdin)
 
-	if prodCode != "" || installDir != "" {
+	if installDir != "" || installer.IsInstalled() {
 		fmt.Println("QuickFlare installation detected.")
 		if !*yes {
 			fmt.Print("Uninstall current version and reinstall? [Y/n]: ")
@@ -346,76 +230,56 @@ func cmdReinstall(ctx context.Context, args []string) error {
 			}
 		}
 
-		// Stop running tray application
-		client, err := ipc.Discover()
-		if err == nil && client != nil {
-			fmt.Printf("Stopping running QuickFlare tray (PID %d)...\n", client.PID())
-			_ = client.Quit(ctx)
-			time.Sleep(500 * time.Millisecond)
+		if installDir == "" {
+			installDir = installer.DefaultInstallDir()
 		}
 
-		// Gracefully remove routes if enabled
-		if removeRoutes {
-			fmt.Println("Gracefully removing active routes from Cloudflare...")
-			if err := unpublishAllActiveRoutes(ctx); err != nil {
-				fmt.Fprintf(os.Stderr, "warning: remove routes: %v\n", err)
-			} else {
-				fmt.Println("Active Cloudflare routes removed.")
-			}
+		opt := installer.Options{
+			InstallDir:   installDir,
+			RemoveRoutes: removeRoutes,
+			RemoveConfig: *keepConfig == false && !*yes, // keep config on reinstall by default
 		}
 
-		// Config removal if requested
-		if !*keepConfig && *yes {
-			// keep configs by default during interactive reinstall so credentials aren't lost
-		}
+		fmt.Println("\nUninstalling current version...")
+		_ = installer.Uninstall(ctx, opt, func(step string, prog float32) {
+			fmt.Printf("[%3.0f%%] %s\n", prog*100, step)
+		})
 	} else {
 		fmt.Println("No existing QuickFlare installation detected. Performing fresh install...")
 	}
 
-	if targetMSI == "" {
-		return fmt.Errorf("no QuickFlare MSI installer found; please specify --msi <path>")
+	if targetInstaller == "" {
+		return fmt.Errorf("no QuickFlare installer found; please download QuickFlare-Setup.exe or specify --installer <path>")
 	}
 
-	absMSI, err := filepath.Abs(targetMSI)
-	if err != nil {
-		absMSI = targetMSI
-	}
-
-	fmt.Printf("Using installer: %s\n", absMSI)
-	return launchDetachedReinstall(prodCode, absMSI)
+	return launchInstaller(targetInstaller)
 }
 
 // cmdInstall handles 'quickflare install'.
 // If QuickFlare is currently installed, it uninstalls the current version first, then reinstalls.
 func cmdInstall(ctx context.Context, args []string) error {
-	prodCode, installDir := getInstalledProductInfo()
-	if prodCode != "" || installDir != "" {
+	_, installDir := getInstalledProductInfo()
+	if installDir != "" || installer.IsInstalled() {
 		fmt.Println("QuickFlare is currently installed. Running uninstaller for current version, then reinstalling...")
 		return cmdReinstall(ctx, args)
 	}
 
 	// Fresh install
 	fs := flag.NewFlagSet("install", flag.ExitOnError)
-	msiPath := fs.String("msi", "", "path to QuickFlare MSI installer")
+	installerPath := fs.String("installer", "", "path to QuickFlare-Setup.exe or MSI installer")
+	fs.StringVar(installerPath, "msi", "", "path to QuickFlare installer")
 	pos := parseFlags(fs, args)
 
-	targetMSI := *msiPath
-	if targetMSI == "" && len(pos) > 0 {
-		targetMSI = pos[0]
+	targetInstaller := *installerPath
+	if targetInstaller == "" && len(pos) > 0 {
+		targetInstaller = pos[0]
 	}
-	if targetMSI == "" {
-		targetMSI = findInstallerMSI()
+	if targetInstaller == "" {
+		targetInstaller = findInstaller()
 	}
-	if targetMSI == "" {
-		return fmt.Errorf("no QuickFlare MSI installer found; please specify --msi <path>")
-	}
-
-	absMSI, err := filepath.Abs(targetMSI)
-	if err != nil {
-		absMSI = targetMSI
+	if targetInstaller == "" {
+		return fmt.Errorf("no QuickFlare installer found; please download QuickFlare-Setup.exe or specify --installer <path>")
 	}
 
-	fmt.Printf("Launching QuickFlare installer (%s)...\n", absMSI)
-	cmd := exec.Command("msiexec.exe", "/i", absMSI)
-	return cmd.Start()
+	return launchInstaller(targetInstaller)
 }

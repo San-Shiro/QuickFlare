@@ -39,6 +39,13 @@ go build -ldflags "-H windowsgui -s -w" -o "build/quickflare-tray.exe" ./cmd/qui
 go build -ldflags "-s -w" -o "build/quickflare.exe" ./cmd/quickflare-cli
 cp -f "build/quickflare.exe" "build/quickflare-$MSI_VERSION-windows-amd64.exe"
 
+# Build self-contained modern GUI setup installer
+mkdir -p cmd/quickflare-installer/payload
+cp -f "build/quickflare.exe" cmd/quickflare-installer/payload/quickflare.exe
+cp -f "build/quickflare-tray.exe" cmd/quickflare-installer/payload/quickflare-tray.exe
+go build -ldflags "-H windowsgui -s -w" -o "build/QuickFlare-Setup.exe" ./cmd/quickflare-installer
+cp -f "build/QuickFlare-Setup.exe" "build/QuickFlare-$MSI_VERSION-Setup.exe"
+
 # Package portable ZIP containing CLI and Tray (no tray-only option)
 powershell -Command "Compress-Archive -Path build/quickflare.exe, build/quickflare-tray.exe, packaging/uninstall.cmd -DestinationPath build/QuickFlare-$MSI_VERSION-windows-portable.zip -Force"
 
@@ -87,6 +94,7 @@ echo "==> Publishing release $TAG"
   --title "QuickFlare $TAG" \
   --notes-file "$NOTES" \
   $PRERELEASE $LATEST \
+  "build/QuickFlare-$MSI_VERSION-Setup.exe#QuickFlare-$MSI_VERSION-Windows-Setup-exe" \
   "build/QuickFlare-$MSI_VERSION-x64.msi#QuickFlare-$MSI_VERSION-Windows-x64-Installer" \
   "build/QuickFlare-$MSI_VERSION-windows-portable.zip#QuickFlare-$MSI_VERSION-Windows-Portable-zip" \
   "build/quickflare-$MSI_VERSION-windows-amd64.exe#QuickFlare-$MSI_VERSION-Windows-CLI-amd64" \
