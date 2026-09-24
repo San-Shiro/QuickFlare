@@ -24,13 +24,14 @@ connection to Cloudflare.
 
 From [Releases](https://github.com/San-Shiro/QuickFlare/releases):
 
-**Windows** — tray app, with the `cloudflared` engine bundled inside it, so
+**Windows** — tray app and CLI, with the `cloudflared` engine bundled inside it, so
 there is nothing else to install.
 
 | File | |
 |---|---|
-| `QuickFlare-0.3.3-x64.msi` | Installer, per-user, adds quickflare to PATH |
-| `QuickFlare-0.3.3.exe` | Portable, zero setup |
+| `QuickFlare-0.3.3-x64.msi` | Installer: per-user, auto-configures installation directory, PATH, and uninstaller (CLI + Tray or CLI only) |
+| `QuickFlare-0.3.3-windows-portable.zip` | Portable bundle (CLI + Tray) |
+| `quickflare-0.3.3-windows-amd64.exe` | Standalone CLI only |
 
 **Linux** — command line only, and currently a preview. See
 [Linux](#linux-preview) below.

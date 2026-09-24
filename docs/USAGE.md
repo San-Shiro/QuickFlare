@@ -6,17 +6,32 @@ QuickFlare is a lightweight Windows tray application that exposes local network 
 
 ## 1. Installation
 
-### Installer (Recommended)
+### Windows Installer (Recommended)
 Download **`QuickFlare-0.3.3-x64.msi`** from the [Releases](https://github.com/San-Shiro/QuickFlare/releases) page.
-- Per-user installation (no administrator privileges required).
-- Places a shortcut in your Start Menu.
+- Per-user installation to `%LOCALAPPDATA%\QuickFlare` (no administrator privileges required).
+- Automatically configures user `PATH` environment variable so `quickflare` is instantly available in `cmd.exe` and PowerShell.
+- Feature selection: **CLI & Engine** (mandatory core) and **System Tray & UI** (optional). No tray-only install is permitted.
+- Includes `uninstall.cmd` directly in the installation folder.
+- Creates Start Menu shortcuts for **QuickFlare** and **Uninstall QuickFlare**.
 - Registers `quickflare` in Windows Run (`Win + R -> quickflare`).
-- Includes the inbuilt Cloudflare Tunnel engine directly.
 
-### Portable Executable
-Download **`QuickFlare-0.3.3.exe`** from the [Releases](https://github.com/San-Shiro/QuickFlare/releases) page.
-- Standalone portable binary with zero external dependencies.
-- Automatically initializes and manages the inbuilt Cloudflare Tunnel engine.
+### Portable Package (CLI + Tray)
+Download **`QuickFlare-0.3.3-windows-portable.zip`** from the [Releases](https://github.com/San-Shiro/QuickFlare/releases) page.
+- Portable bundle containing `quickflare.exe`, `quickflare-tray.exe`, and `uninstall.cmd`.
+- Extract to any folder. Run `quickflare path install` to register into user `PATH`.
+
+### Standalone CLI Only
+Download **`quickflare-0.3.3-windows-amd64.exe`** from the [Releases](https://github.com/San-Shiro/QuickFlare/releases) page.
+- Lightweight standalone terminal binary for headless or script-driven environments.
+
+---
+
+## 2. Uninstallation
+
+QuickFlare provides three clean ways to uninstall:
+1. **Uninstaller File**: Open `%LOCALAPPDATA%\QuickFlare` and double-click `uninstall.cmd`.
+2. **Command Line**: Run `quickflare uninstall` (or `quickflare uninstall --yes`) in `cmd.exe` or PowerShell.
+3. **Start Menu / Windows Settings**: Click **Uninstall QuickFlare** in the Start Menu or use **Windows Settings** -> **Installed Apps**.
 
 ---
 
@@ -107,5 +122,8 @@ quickflare quick --port 8080
 :: Check or install PATH registration
 quickflare path status
 quickflare path install
+
+:: Clean uninstallation
+quickflare uninstall
 ```
 Changes made via the CLI automatically synchronize in real time with the running tray UI.

@@ -7,7 +7,8 @@
   under that user's profile, so it has no reason to require administrator
   rights or to install machine-wide.
 -->
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
   <Package Name="QuickFlare"
            Manufacturer="QuickFlare contributors"
            Version="$(var.Version)"
@@ -19,13 +20,7 @@
       AllowSameVersionUpgrades is not optional here. WiX mints a fresh
       ProductCode on every build, and MajorUpgrade only removes versions
       LOWER than the one being installed - so reinstalling the same version
-      registered a second product rather than replacing the first. Three
-      QuickFlare entries stacked up in Add/Remove Programs on one machine
-      that way, each pointing at the same install folder.
-
-      The documented hazard - two copies installed at once - needs an
-      identical ProductCode as well as an identical version, which cannot
-      happen while the ProductCode is regenerated per build.
+      registered a second product rather than replacing the first.
     -->
     <MajorUpgrade AllowSameVersionUpgrades="yes"
                   DowngradeErrorMessage="A newer version of QuickFlare is already installed." />
@@ -35,28 +30,27 @@
     <Property Id="ARPPRODUCTICON" Value="QuickFlareIcon" />
     <Property Id="ARPURLINFOABOUT" Value="https://github.com/San-Shiro/QuickFlare" />
 
+    <!-- WiX UI FeatureTree configuration -->
+    <ui:WixUI Id="WixUI_FeatureTree" />
+    <WixVariable Id="WixUILicenseRtf" Value="packaging\license.rtf" />
+
     <StandardDirectory Id="LocalAppDataFolder">
       <Directory Id="INSTALLFOLDER" Name="QuickFlare">
         <!--
-          Declared so uninstall can clean it out. Nothing is installed here:
-          QuickFlare extracts cloudflared into it at runtime, which means the
-          installer has no record of the file and would otherwise leave 52 MB
-          behind on uninstall.
+          Declared so uninstall can clean it out. QuickFlare extracts cloudflared
+          into it at runtime, which means the installer has no record of the
+          file and would otherwise leave 52 MB behind on uninstall.
         -->
         <Directory Id="BinFolder" Name="bin" />
       </Directory>
     </StandardDirectory>
+
     <StandardDirectory Id="ProgramMenuFolder">
       <Directory Id="AppShortcutFolder" Name="QuickFlare" />
     </StandardDirectory>
 
-    <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER">
-      <Component Id="QuickFlareTrayExe" Guid="B41D9A7C-5E82-4F19-8C3A-6D0E4B2A8F57">
-        <File Id="QuickFlareTrayExeFile"
-              Source="build\quickflare-tray.exe"
-              Name="quickflare-tray.exe"
-              KeyPath="yes" />
-      </Component>
+    <ComponentGroup Id="CliComponents" Directory="INSTALLFOLDER">
+      <!-- CLI executable with automatic user PATH registration -->
       <Component Id="QuickFlareCliExe" Guid="A3816B9F-841D-4E9A-B03F-8C4D6E2A1F50">
         <File Id="QuickFlareCliExeFile"
               Source="build\quickflare.exe"
@@ -70,11 +64,62 @@
                      Action="set"
                      Permanent="no" />
       </Component>
-      <!--
-        cloudflared is NOT a file in this package. It is embedded in
-        the tray application (gzipped, under internal/supervisor/assets) and
-        extracted on first use into the app's own data directory.
-      -->
+
+      <!-- Dedicated uninstaller file in the installation directory -->
+      <Component Id="UninstallScript" Guid="E74A2B81-5C93-4D0E-9F1A-8B2C4D6E0A12">
+        <File Id="UninstallCmdFile"
+              Source="packaging\uninstall.cmd"
+              Name="uninstall.cmd"
+              KeyPath="yes" />
+      </Component>
+
+      <!-- App Paths entry for quickflare.exe (Win+R / shell execution) -->
+      <Component Id="AppPathsCliEntry" Guid="D63FB9AE-7A04-4B3C-8E5F-9F2A6D4C0B79">
+        <RegistryKey Root="HKCU" Key="Software\Microsoft\Windows\CurrentVersion\App Paths\quickflare.exe">
+          <RegistryValue Type="string" Value="[INSTALLFOLDER]quickflare.exe" KeyPath="yes" />
+          <RegistryValue Name="Path" Type="string" Value="[INSTALLFOLDER]" />
+        </RegistryKey>
+      </Component>
+
+      <!-- Installation metadata recorded in registry -->
+      <Component Id="InstallRegistry" Guid="2D5C8F1E-3B9A-4E71-9A6D-0F2B4C8E7A53">
+        <RegistryKey Root="HKCU" Key="Software\QuickFlare">
+          <RegistryValue Name="installed" Type="integer" Value="1" KeyPath="yes" />
+          <RegistryValue Name="ProductCode" Type="string" Value="[ProductCode]" />
+          <RegistryValue Name="InstallDir" Type="string" Value="[INSTALLFOLDER]" />
+          <RegistryValue Name="Version" Type="string" Value="$(var.Version)" />
+        </RegistryKey>
+      </Component>
+
+      <!-- Engine and folder cleanup on uninstall -->
+      <Component Id="CleanupEngine" Guid="F1A7C264-9D38-4E05-B6C2-3A8E7D51940B"
+                 Directory="BinFolder">
+        <RemoveFile Id="RemoveExtractedCloudflared" Name="cloudflared.exe" On="uninstall" />
+        <RemoveFolder Id="RemoveBinFolder" On="uninstall" />
+        <RemoveFolder Id="RemoveInstallFolder" Directory="INSTALLFOLDER" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\QuickFlare"
+                       Name="engine" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <ComponentGroup Id="TrayComponents" Directory="INSTALLFOLDER">
+      <!-- Tray GUI executable -->
+      <Component Id="QuickFlareTrayExe" Guid="B41D9A7C-5E82-4F19-8C3A-6D0E4B2A8F57">
+        <File Id="QuickFlareTrayExeFile"
+              Source="build\quickflare-tray.exe"
+              Name="quickflare-tray.exe"
+              KeyPath="yes" />
+      </Component>
+
+      <!-- App Paths entry for quickflare-tray.exe -->
+      <Component Id="AppPathsTrayEntry" Guid="7C1F4E92-3B0D-4A58-9E2A-1C6D8F4B0E37">
+        <RegistryKey Root="HKCU" Key="Software\Microsoft\Windows\CurrentVersion\App Paths\quickflare-tray.exe">
+          <RegistryValue Type="string" Value="[INSTALLFOLDER]quickflare-tray.exe" KeyPath="yes" />
+          <RegistryValue Name="Path" Type="string" Value="[INSTALLFOLDER]" />
+        </RegistryKey>
+      </Component>
+
+      <!-- Start Menu shortcuts for QuickFlare and Uninstaller -->
       <Component Id="AppShortcut" Guid="C52EAB8D-6F93-4A2B-9D4E-7E1F5C3B9A68"
                  Directory="AppShortcutFolder">
         <Shortcut Id="StartMenuShortcut"
@@ -83,42 +128,38 @@
                   Target="[INSTALLFOLDER]quickflare-tray.exe"
                   WorkingDirectory="INSTALLFOLDER"
                   Icon="QuickFlareIcon" />
+        <Shortcut Id="StartMenuUninstallShortcut"
+                  Name="Uninstall QuickFlare"
+                  Description="Uninstall QuickFlare"
+                  Target="[SystemFolder]msiexec.exe"
+                  Arguments="/x [ProductCode]"
+                  Icon="QuickFlareIcon" />
         <RemoveFolder Id="RemoveAppShortcutFolder" Directory="AppShortcutFolder" On="uninstall" />
         <RegistryValue Root="HKCU" Key="Software\QuickFlare"
-                       Name="installed" Type="integer" Value="1" KeyPath="yes" />
-      </Component>
-
-      <!--
-        App Paths makes the name runnable on its own: Win+R, "quickflare", Enter.
-      -->
-      <Component Id="AppPathsEntry" Guid="D63FB9AE-7A04-4B3C-8E5F-9F2A6D4C0B79"
-                 Directory="INSTALLFOLDER">
-        <RegistryKey Root="HKCU" Key="Software\Microsoft\Windows\CurrentVersion\App Paths\quickflare.exe">
-          <RegistryValue Type="string" Value="[INSTALLFOLDER]quickflare.exe" KeyPath="yes" />
-          <RegistryValue Name="Path" Type="string" Value="[INSTALLFOLDER]" />
-        </RegistryKey>
-      </Component>
-
-      <!--
-        Uninstall cleanup for the extracted engine. RemoveFile is the only way
-        to reach a file the package did not install - Windows Installer tracks
-        what it wrote, and the extracted cloudflared was written by the app.
-        Without this an uninstall leaves the largest file on disk behind, and
-        the install directory with it.
-      -->
-      <Component Id="CleanupEngine" Guid="F1A7C264-9D38-4E05-B6C2-3A8E7D51940B"
-                 Directory="BinFolder">
-        <RemoveFile Id="RemoveExtractedCloudflared" Name="cloudflared.exe" On="uninstall" />
-        <RemoveFolder Id="RemoveBinFolder" On="uninstall" />
-        <!-- And the install folder itself, once bin has gone from inside it. -->
-        <RemoveFolder Id="RemoveInstallFolder" Directory="INSTALLFOLDER" On="uninstall" />
-        <RegistryValue Root="HKCU" Key="Software\QuickFlare"
-                       Name="engine" Type="integer" Value="1" KeyPath="yes" />
+                       Name="tray_installed" Type="integer" Value="1" KeyPath="yes" />
       </Component>
     </ComponentGroup>
 
-    <Feature Id="Main" Title="QuickFlare" Level="1">
-      <ComponentGroupRef Id="AppFiles" />
+    <!--
+      Feature Hierarchy:
+      - CliFeature: Mandatory (AllowAbsent="no"). Contains quickflare.exe, PATH, uninstaller file, and engine cleanup.
+      - TrayFeature: Optional (AllowAbsent="yes", default Level 1). Contains quickflare-tray.exe and shortcuts.
+      This allows installing CLI Only or CLI with Tray, but NO Tray-only installation.
+    -->
+    <Feature Id="CliFeature"
+             Title="QuickFlare CLI &amp; Engine"
+             Description="QuickFlare command-line interface, user PATH environment configuration, and uninstaller. (Required)"
+             Level="1"
+             AllowAbsent="no">
+      <ComponentGroupRef Id="CliComponents" />
+    </Feature>
+
+    <Feature Id="TrayFeature"
+             Title="QuickFlare System Tray &amp; UI"
+             Description="QuickFlare graphical system tray application, Web dashboard, and Start Menu shortcuts."
+             Level="1"
+             AllowAbsent="yes">
+      <ComponentGroupRef Id="TrayComponents" />
     </Feature>
   </Package>
 </Wix>

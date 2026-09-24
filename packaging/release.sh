@@ -37,15 +37,17 @@ GH="$(find "$LOCALAPPDATA/Microsoft/WinGet" -name gh.exe 2>/dev/null | head -1)"
 echo "==> Building Windows artefacts for $TAG"
 go build -ldflags "-H windowsgui -s -w" -o "build/quickflare-tray.exe" ./cmd/quickflare
 go build -ldflags "-s -w" -o "build/quickflare.exe" ./cmd/quickflare-cli
-cp -f "build/quickflare-tray.exe" "build/QuickFlare-$MSI_VERSION.exe"
 cp -f "build/quickflare.exe" "build/quickflare-$MSI_VERSION-windows-amd64.exe"
+
+# Package portable ZIP containing CLI and Tray (no tray-only option)
+powershell -Command "Compress-Archive -Path build/quickflare.exe, build/quickflare-tray.exe, packaging/uninstall.cmd -DestinationPath build/QuickFlare-$MSI_VERSION-windows-portable.zip -Force"
 
 # -arch x64 is not optional. Without it WiX declares the package Intel (x86)
 # while it ships an amd64 binary, and Windows then registers the product in
 # the 32-bit registry view - the uninstall entry lands under WOW6432Node
 # rather than where a per-user x64 install belongs.
 PATH="$PATH:$HOME/.dotnet/tools" wix build packaging/quickflare.wxs -b . \
-  -arch x64 -d "Version=$MSI_VERSION" -o "build/QuickFlare-$MSI_VERSION-x64.msi"
+  -arch x64 -ext WixToolset.UI.wixext -d "Version=$MSI_VERSION" -o "build/QuickFlare-$MSI_VERSION-x64.msi"
 rm -f build/*.wixpdb
 
 echo "==> Building Linux artefacts for $TAG"
@@ -86,7 +88,8 @@ echo "==> Publishing release $TAG"
   --notes-file "$NOTES" \
   $PRERELEASE $LATEST \
   "build/QuickFlare-$MSI_VERSION-x64.msi#QuickFlare-$MSI_VERSION-Windows-x64-Installer" \
-  "build/QuickFlare-$MSI_VERSION.exe#QuickFlare-$MSI_VERSION-Windows-Portable" \
+  "build/QuickFlare-$MSI_VERSION-windows-portable.zip#QuickFlare-$MSI_VERSION-Windows-Portable-zip" \
+  "build/quickflare-$MSI_VERSION-windows-amd64.exe#QuickFlare-$MSI_VERSION-Windows-CLI-amd64" \
   "build/quickflare_${MSI_VERSION}_amd64.deb#QuickFlare-$MSI_VERSION-Debian-Ubuntu-amd64" \
   "build/quickflare_${MSI_VERSION}_arm64.deb#QuickFlare-$MSI_VERSION-Debian-Ubuntu-arm64" \
   "build/quickflare-${MSI_VERSION}-1.x86_64.rpm#QuickFlare-$MSI_VERSION-Fedora-RHEL-x86_64" \
