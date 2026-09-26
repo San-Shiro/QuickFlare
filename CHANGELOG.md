@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.4.6 - 2026-09-26
+
+- Fixed tray icon click not opening window due to duplicate mouse-down/up event triggers.
+- Added named mutex and IPC detection to prevent duplicate tray instances on relaunch.
+- Fixed installer lingering in memory by launching tray process detached via ShellExecute.
+
 ## v0.4.5 - 2026-09-24
 
 - **Native Setup Engine** — Replaced bloated Go setup wizard with native Inno Setup 6 compiler using ultra64 solid LZMA2 compression, reducing installer size by 65% from 71 MB to 24 MB.

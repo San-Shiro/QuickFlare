@@ -3970,7 +3970,7 @@ dependencies = [
 
 [[package]]
 name = "quickflare"
-version = "0.4.5"
+version = "0.4.6"
 dependencies = [
  "anyhow",
  "clap",
@@ -3982,7 +3982,7 @@ dependencies = [
 
 [[package]]
 name = "quickflare-core"
-version = "0.4.5"
+version = "0.4.6"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -3999,7 +3999,7 @@ dependencies = [
 
 [[package]]
 name = "quickflare-tray"
-version = "0.4.5"
+version = "0.4.6"
 dependencies = [
  "anyhow",
  "arboard",
