@@ -6,7 +6,7 @@ use anyhow::{Context, Result};
 use slint::{ComponentHandle, ModelRc, VecModel};
 use tokio::sync::Mutex;
 use tray_icon::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem};
-use tray_icon::{TrayIcon, TrayIconBuilder, TrayIconEvent};
+use tray_icon::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent};
 
 use quickflare_core::client::CloudflareClient;
 use quickflare_core::config::Config;
@@ -14,15 +14,162 @@ use quickflare_core::ipc::{IpcRequest, IpcResponse, IpcServer};
 use quickflare_core::models::{IngressRule, StoredRoute};
 use quickflare_core::supervisor::Supervisor;
 
+#[cfg(windows)]
+mod win32 {
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Foundation::{CloseHandle, GetLastError, SetLastError, ERROR_ALREADY_EXISTS, HANDLE};
+    use windows_sys::Win32::System::Threading::CreateMutexW;
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        FindWindowW, GetForegroundWindow, SetForegroundWindow, ShowWindow, SW_RESTORE,
+    };
+    use quickflare_core::ipc::{IpcClient, IpcRequest};
+
+    pub struct SingleInstanceMutex {
+        handle: HANDLE,
+    }
+
+    impl Drop for SingleInstanceMutex {
+        fn drop(&mut self) {
+            unsafe {
+                if !self.handle.is_null() {
+                    CloseHandle(self.handle);
+                }
+            }
+        }
+    }
+
+    fn try_acquire_mutex(name: &str) -> Result<Option<SingleInstanceMutex>, u32> {
+        let wide: Vec<u16> = OsStr::new(name).encode_wide().chain(std::iter::once(0)).collect();
+        unsafe {
+            SetLastError(0);
+            let handle = CreateMutexW(std::ptr::null(), 1, wide.as_ptr());
+            let err = GetLastError();
+            if handle.is_null() {
+                return Err(err);
+            }
+            if err == ERROR_ALREADY_EXISTS {
+                CloseHandle(handle);
+                return Ok(None);
+            }
+            Ok(Some(SingleInstanceMutex { handle }))
+        }
+    }
+
+    pub fn kill_zombie_instances() {
+        let current_pid = std::process::id();
+        let _ = std::process::Command::new("taskkill")
+            .args([
+                "/F",
+                "/IM",
+                "quickflare-tray.exe",
+                "/FI",
+                &format!("PID ne {}", current_pid),
+            ])
+            .output();
+    }
+
+    pub fn ensure_single_instance(rt: &tokio::runtime::Runtime) -> Result<SingleInstanceMutex, String> {
+        const MUTEX_NAME: &str = r"Local\QuickFlare_Tray_Instance_Mutex";
+
+        match try_acquire_mutex(MUTEX_NAME) {
+            Ok(Some(guard)) => Ok(guard),
+            Ok(None) => {
+                // Mutex is already held. Check if existing instance is alive and responsive.
+                tracing::info!("Existing QuickFlare tray instance mutex detected. Notifying existing instance...");
+                let notified = rt.block_on(async {
+                    tokio::time::timeout(
+                        tokio::time::Duration::from_millis(1500),
+                        IpcClient::send(&IpcRequest::Open),
+                    ).await
+                });
+
+                match notified {
+                    Ok(Ok(_)) => {
+                        Err("Existing QuickFlare tray instance is already running. Opened existing window.".into())
+                    }
+                    _ => {
+                        // Existing process is a hung/zombie process! Kill it and take over.
+                        tracing::warn!("Existing instance is unresponsive. Terminating zombie process...");
+                        kill_zombie_instances();
+                        std::thread::sleep(std::time::Duration::from_millis(300));
+
+                        match try_acquire_mutex(MUTEX_NAME) {
+                            Ok(Some(guard)) => {
+                                tracing::info!("Acquired single instance mutex after terminating zombie process.");
+                                Ok(guard)
+                            }
+                            Ok(None) => Err("Could not acquire mutex even after zombie cleanup.".into()),
+                            Err(code) => Err(format!("Failed to create mutex after cleanup: error code {}", code)),
+                        }
+                    }
+                }
+            }
+            Err(code) => Err(format!("Failed to create mutex: error code {}", code)),
+        }
+    }
+
+    pub fn focus_or_toggle(is_visible: bool, hide_fn: impl FnOnce(), show_fn: impl FnOnce()) {
+        let title: Vec<u16> = OsStr::new("QuickFlare").encode_wide().chain(std::iter::once(0)).collect();
+        unsafe {
+            let hwnd = FindWindowW(std::ptr::null(), title.as_ptr());
+            if !hwnd.is_null() {
+                let foreground = GetForegroundWindow();
+                if is_visible && foreground == hwnd {
+                    hide_fn();
+                } else {
+                    show_fn();
+                    ShowWindow(hwnd, SW_RESTORE);
+                    SetForegroundWindow(hwnd);
+                }
+            } else {
+                if is_visible {
+                    hide_fn();
+                } else {
+                    show_fn();
+                }
+            }
+        }
+    }
+
+    pub fn focus_window() {
+        let title: Vec<u16> = OsStr::new("QuickFlare").encode_wide().chain(std::iter::once(0)).collect();
+        unsafe {
+            let hwnd = FindWindowW(std::ptr::null(), title.as_ptr());
+            if !hwnd.is_null() {
+                ShowWindow(hwnd, SW_RESTORE);
+                SetForegroundWindow(hwnd);
+            }
+        }
+    }
+}
+
+#[cfg(not(windows))]
+mod win32 {
+    pub struct SingleInstanceMutex;
+    pub fn ensure_single_instance(_rt: &tokio::runtime::Runtime) -> Result<SingleInstanceMutex, String> {
+        Ok(SingleInstanceMutex)
+    }
+    pub fn focus_or_toggle(is_visible: bool, hide_fn: impl FnOnce(), show_fn: impl FnOnce()) {
+        if is_visible {
+            hide_fn();
+        } else {
+            show_fn();
+        }
+    }
+    pub fn focus_window() {}
+}
+
 slint::include_modules!();
 
 fn main() -> Result<()> {
     std::panic::set_hook(Box::new(|info| {
+        let msg = format!("PANIC: {:?}\nBacktrace:\n{:?}", info, std::backtrace::Backtrace::capture());
         if let Some(mut path) = dirs::data_local_dir() {
             path.push("QuickFlare");
             let _ = std::fs::create_dir_all(&path);
             path.push("panic.log");
-            let _ = std::fs::write(&path, format!("PANIC: {:?}\nBacktrace:\n{:?}", info, std::backtrace::Backtrace::capture()));
+            let _ = std::fs::write(&path, msg);
         }
     }));
 
@@ -30,7 +177,7 @@ fn main() -> Result<()> {
         path.push("QuickFlare");
         let _ = std::fs::create_dir_all(&path);
         path.push("tray.log");
-        if let Ok(file) = std::fs::OpenOptions::new().create(true).write(true).truncate(true).open(&path) {
+        if let Ok(file) = std::fs::OpenOptions::new().create(true).write(true).append(true).open(&path) {
             tracing_subscriber::fmt()
                 .with_writer(std::sync::Mutex::new(file))
                 .with_ansi(false)
@@ -46,9 +193,26 @@ fn main() -> Result<()> {
         .context("Failed to build tokio runtime")?;
     let _guard = rt.enter();
 
+    let _single_instance_guard = match win32::ensure_single_instance(&rt) {
+        Ok(guard) => {
+            tracing::info!("Acquired single instance mutex successfully.");
+            guard
+        }
+        Err(msg) => {
+            tracing::info!("{}", msg);
+            return Ok(());
+        }
+    };
+
     let main_window = MainWindow::new().context("Failed to initialize Slint MainWindow")?;
     let main_handle = main_window.as_weak();
     let is_window_visible = Arc::new(AtomicBool::new(true));
+
+    let vis_close = is_window_visible.clone();
+    main_window.window().on_close_requested(move || {
+        vis_close.store(false, Ordering::SeqCst);
+        slint::CloseRequestResponse::HideWindow
+    });
 
     // 1. Setup System Tray & Menu
     let tray_menu = Menu::new();
@@ -141,6 +305,7 @@ fn main() -> Result<()> {
                             if let Some(w) = handle.upgrade() {
                                 let _ = w.show();
                                 is_vis.store(true, Ordering::SeqCst);
+                                win32::focus_window();
                             }
                         });
                         IpcResponse::Ok
@@ -281,19 +446,27 @@ fn main() -> Result<()> {
     tokio::task::spawn_blocking(move || {
         loop {
             if let Ok(event) = TrayIconEvent::receiver().recv() {
-                if let TrayIconEvent::Click { .. } = event {
+                if let TrayIconEvent::Click {
+                    button: MouseButton::Left,
+                    button_state: MouseButtonState::Up,
+                    ..
+                } = event {
                     let h = handle_events.clone();
                     let vis = is_visible_tray.clone();
                     let _ = slint::invoke_from_event_loop(move || {
                         if let Some(w) = h.upgrade() {
                             let current = vis.load(Ordering::SeqCst);
-                            if current {
-                                let _ = w.hide();
-                                vis.store(false, Ordering::SeqCst);
-                            } else {
-                                let _ = w.show();
-                                vis.store(true, Ordering::SeqCst);
-                            }
+                            win32::focus_or_toggle(
+                                current,
+                                || {
+                                    let _ = w.hide();
+                                    vis.store(false, Ordering::SeqCst);
+                                },
+                                || {
+                                    let _ = w.show();
+                                    vis.store(true, Ordering::SeqCst);
+                                },
+                            );
                         }
                     });
                 }
@@ -319,6 +492,7 @@ fn main() -> Result<()> {
                         if let Some(w) = h.upgrade() {
                             let _ = w.show();
                             vis.store(true, Ordering::SeqCst);
+                            win32::focus_window();
                         }
                     });
                 } else if event.id == id_pause {
@@ -370,6 +544,8 @@ fn main() -> Result<()> {
                         let _ = slint::invoke_from_event_loop(|| {
                             let _ = slint::quit_event_loop();
                         });
+                        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+                        std::process::exit(0);
                     });
                     break;
                 }

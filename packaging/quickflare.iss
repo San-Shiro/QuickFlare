@@ -22,8 +22,9 @@ ArchitecturesInstallIn64BitMode=x64compatible
 SetupIconFile=..\assets\quickflare.ico
 UninstallDisplayIcon={app}\quickflare.ico
 WizardStyle=modern
-CloseApplications=yes
+CloseApplications=no
 RestartApplications=no
+SetupMutex=QuickFlare_Setup_Mutex
 
 [Tasks]
 Name: "trayapp"; Description: "Install System Tray Application (Recommended)"; GroupDescription: "Experience Selection:"
@@ -40,7 +41,7 @@ Name: "{userprograms}\QuickFlare"; Filename: "{app}\quickflare-tray.exe"; IconFi
 Name: "{userstartup}\QuickFlare"; Filename: "{app}\quickflare-tray.exe"; Tasks: trayapp\autostart
 
 [Run]
-Filename: "{app}\quickflare-tray.exe"; Description: "Launch QuickFlare"; Flags: postinstall nowait skipifsilent; Tasks: trayapp
+Filename: "{app}\quickflare-tray.exe"; Description: "Launch QuickFlare"; Flags: postinstall nowait skipifsilent shellexec runascurrentuser; Tasks: trayapp
 
 [Code]
 const
@@ -106,6 +107,15 @@ begin
   end;
 end;
 
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  resultCode: Integer;
+begin
+  // Gracefully terminate any running QuickFlare instances before copying files
+  Exec('taskkill.exe', '/F /IM quickflare-tray.exe /IM quickflare.exe', '', SW_HIDE, ewWaitUntilTerminated, resultCode);
+  Result := '';
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then
@@ -121,6 +131,7 @@ var
 begin
   if CurUninstallStep = usUninstall then
   begin
+    Exec('taskkill.exe', '/F /IM quickflare-tray.exe /IM quickflare.exe', '', SW_HIDE, ewWaitUntilTerminated, resultCode);
     if MsgBox('Do you want to gracefully tear down and unpublish all active Cloudflare routes via API before removing QuickFlare?' + #13#10 + #13#10 + '(Recommended: Yes)', mbConfirmation, MB_YESNO or MB_DEFBUTTON1) = IDYES then
     begin
       Exec(ExpandConstant('{app}\quickflare.exe'), 'uninstall --silent --routes-only', '', SW_HIDE, ewWaitUntilTerminated, resultCode);

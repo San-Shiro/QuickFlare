@@ -73,7 +73,7 @@ async fn main() -> Result<()> {
         },
         Some(Commands::Up) => cmd_up().await,
         Some(Commands::Down) => cmd_down().await,
-        Some(Commands::Tray) => cmd_tray(),
+        Some(Commands::Tray) => cmd_tray().await,
         Some(Commands::Stop) => cmd_stop().await,
     }
 }
@@ -277,9 +277,15 @@ async fn cmd_down() -> Result<()> {
     Ok(())
 }
 
-fn cmd_tray() -> Result<()> {
+async fn cmd_tray() -> Result<()> {
     #[cfg(windows)]
     {
+        // First check if an existing instance is already running
+        if let Ok(_) = notify_tray(IpcRequest::Open).await {
+            println!("✓ QuickFlare system tray is already running (opened window).");
+            return Ok(());
+        }
+
         let exe_path = std::env::current_exe()?
             .parent()
             .unwrap()
