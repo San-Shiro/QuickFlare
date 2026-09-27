@@ -82,18 +82,32 @@ begin
   end;
 end;
 
+function NormalizePath(path: string): string;
+begin
+  path := Trim(path);
+  if (Length(path) >= 2) and (path[1] = '"') and (path[Length(path)] = '"') then
+    path := Copy(path, 2, Length(path) - 2);
+  StringChangeEx(path, '/', '\', True);
+  while (Length(path) > 0) and (path[Length(path)] = '\') do
+    Delete(path, Length(path), 1);
+  Result := Uppercase(Trim(path));
+end;
+
 procedure RemoveAppFromPath();
 var
   currentPath: string;
   newPath: string;
-  appDir: string;
+  appDirNorm: string;
   part: string;
+  partNorm: string;
   p: Integer;
+  modified: Boolean;
 begin
-  appDir := Trim(ExpandConstant('{app}'));
+  appDirNorm := NormalizePath(ExpandConstant('{app}'));
   if RegQueryStringValue(HKCU, 'Environment', 'Path', currentPath) then
   begin
     newPath := '';
+    modified := False;
     while Length(currentPath) > 0 do
     begin
       p := Pos(';', currentPath);
@@ -107,15 +121,24 @@ begin
         part := Trim(currentPath);
         currentPath := '';
       end;
-      if (Length(part) > 0) and (CompareText(part, appDir) <> 0) then
+      if Length(part) > 0 then
       begin
-        if Length(newPath) > 0 then
-          newPath := newPath + ';';
-        newPath := newPath + part;
+        partNorm := NormalizePath(part);
+        if partNorm = appDirNorm then
+          modified := True
+        else
+        begin
+          if Length(newPath) > 0 then
+            newPath := newPath + ';';
+          newPath := newPath + part;
+        end;
       end;
     end;
-    RegWriteStringValue(HKCU, 'Environment', 'Path', newPath);
-    RefreshEnvironment();
+    if modified then
+    begin
+      RegWriteStringValue(HKCU, 'Environment', 'Path', newPath);
+      RefreshEnvironment();
+    end;
   end;
 end;
 

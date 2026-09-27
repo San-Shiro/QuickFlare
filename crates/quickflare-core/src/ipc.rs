@@ -78,6 +78,11 @@ pub mod windows {
                                 if let Ok(resp_bytes) = serde_json::to_vec(&resp) {
                                     if server.write_all(&resp_bytes).await.is_ok() {
                                         let _ = server.flush().await;
+                                        let mut drain = [0u8; 1];
+                                        let _ = tokio::time::timeout(
+                                            tokio::time::Duration::from_secs(1),
+                                            server.read(&mut drain),
+                                        ).await;
                                     }
                                 }
                             }

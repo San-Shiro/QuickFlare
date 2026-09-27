@@ -112,12 +112,14 @@ impl Config {
         let json_data = serde_json::to_string_pretty(self)
             .context("Failed to serialize configuration to JSON")?;
 
-        let tmp_path = path.with_extension("tmp");
+        let tmp_file_name = format!("{}.{}.tmp", path.file_name().and_then(|n| n.to_str()).unwrap_or("config.json"), std::process::id());
+        let tmp_path = path.parent().unwrap_or(path).join(tmp_file_name);
         std::fs::write(&tmp_path, json_data)
             .with_context(|| format!("Failed to write temporary config {:?}", tmp_path))?;
 
-        if let Err(_) = std::fs::rename(&tmp_path, path) {
-            let _ = std::fs::copy(&tmp_path, path);
+        if let Err(e) = std::fs::rename(&tmp_path, path) {
+            std::fs::copy(&tmp_path, path)
+                .with_context(|| format!("Failed to copy config {:?} to {:?}: {}", tmp_path, path, e))?;
             let _ = std::fs::remove_file(&tmp_path);
         }
 

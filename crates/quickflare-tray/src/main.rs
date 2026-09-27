@@ -193,14 +193,6 @@ async fn start_tunnel_session(
                     if let Ok(run_token) = client.get_tunnel_token(&acc.id, &tunnel.id).await {
                         let mut s = sup.lock().await;
                         if s.start(&run_token).await.is_ok() {
-                            conn.store(true, Ordering::SeqCst);
-                            let _ = slint::invoke_from_event_loop({
-                                let handle = handle.clone();
-                                let cfg = cfg.clone();
-                                move || {
-                                    update_ui_state(&handle, &cfg, true);
-                                }
-                            });
                             return true;
                         }
                     }
@@ -433,8 +425,10 @@ fn main() -> Result<()> {
     });
 
     let handle_for_add = main_handle.clone();
+    let conn_add = is_connected.clone();
     main_window.on_add_route(move |subdomain, port_str| {
         let handle = handle_for_add.clone();
+        let conn = conn_add.clone();
         let subdomain = subdomain.to_string();
         let port: u16 = port_str.trim().parse().unwrap_or(8080);
         tokio::spawn(async move {
@@ -467,8 +461,9 @@ fn main() -> Result<()> {
                             let _ = client.update_ingress_rules(&acc.id, &tunnel.id, rules).await;
                             let _ = cfg.save();
 
+                            let connected = conn.load(Ordering::SeqCst);
                             let _ = slint::invoke_from_event_loop(move || {
-                                update_ui_state(&handle, &cfg, true);
+                                update_ui_state(&handle, &cfg, connected);
                             });
                         }
                     }
@@ -478,8 +473,10 @@ fn main() -> Result<()> {
     });
 
     let handle_for_rm = main_handle.clone();
+    let conn_rm = is_connected.clone();
     main_window.on_remove_route(move |hostname| {
         let handle = handle_for_rm.clone();
+        let conn = conn_rm.clone();
         let hostname = hostname.to_string();
         tokio::spawn(async move {
             let mut cfg = Config::load().unwrap_or_default();
@@ -503,8 +500,9 @@ fn main() -> Result<()> {
                     }
                 }
                 let _ = cfg.save();
+                let connected = conn.load(Ordering::SeqCst);
                 let _ = slint::invoke_from_event_loop(move || {
-                    update_ui_state(&handle, &cfg, true);
+                    update_ui_state(&handle, &cfg, connected);
                 });
             }
         });
