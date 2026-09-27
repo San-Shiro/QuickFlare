@@ -12,7 +12,7 @@ use quickflare_core::client::CloudflareClient;
 use quickflare_core::config::Config;
 use quickflare_core::ipc::{IpcRequest, IpcResponse, IpcServer};
 use quickflare_core::models::{IngressRule, StoredRoute};
-use quickflare_core::supervisor::Supervisor;
+use quickflare_core::supervisor::{Supervisor, TunnelState};
 
 #[cfg(windows)]
 mod win32 {
@@ -58,15 +58,21 @@ mod win32 {
 
     pub fn kill_zombie_instances() {
         let current_pid = std::process::id();
-        let _ = std::process::Command::new("taskkill")
-            .args([
-                "/F",
-                "/IM",
-                "quickflare-tray.exe",
-                "/FI",
-                &format!("PID ne {}", current_pid),
-            ])
-            .output();
+        let mut cmd = std::process::Command::new("taskkill");
+        cmd.args([
+            "/F",
+            "/IM",
+            "quickflare-tray.exe",
+            "/FI",
+            &format!("PID ne {}", current_pid),
+        ]);
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
+        let _ = cmd.output();
     }
 
     pub fn ensure_single_instance(rt: &tokio::runtime::Runtime) -> Result<SingleInstanceMutex, String> {
@@ -162,6 +168,58 @@ mod win32 {
 
 slint::include_modules!();
 
+async fn start_tunnel_session(
+    sup: Arc<Mutex<Supervisor>>,
+    conn: Arc<AtomicBool>,
+    handle: slint::Weak<MainWindow>,
+) -> bool {
+    let cfg = Config::load().unwrap_or_default();
+    if cfg.api_token.is_empty() || cfg.routes_disabled {
+        conn.store(false, Ordering::SeqCst);
+        let _ = slint::invoke_from_event_loop({
+            let handle = handle.clone();
+            let cfg = cfg.clone();
+            move || {
+                update_ui_state(&handle, &cfg, false);
+            }
+        });
+        return false;
+    }
+
+    if let Ok(client) = CloudflareClient::new(cfg.api_token.clone()) {
+        if let Ok(accounts) = client.list_accounts().await {
+            if let Some(acc) = accounts.first() {
+                if let Ok(tunnel) = client.get_or_create_tunnel(&acc.id, "quickflare").await {
+                    if let Ok(run_token) = client.get_tunnel_token(&acc.id, &tunnel.id).await {
+                        let mut s = sup.lock().await;
+                        if s.start(&run_token).await.is_ok() {
+                            conn.store(true, Ordering::SeqCst);
+                            let _ = slint::invoke_from_event_loop({
+                                let handle = handle.clone();
+                                let cfg = cfg.clone();
+                                move || {
+                                    update_ui_state(&handle, &cfg, true);
+                                }
+                            });
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    conn.store(false, Ordering::SeqCst);
+    let _ = slint::invoke_from_event_loop({
+        let handle = handle.clone();
+        let cfg = cfg.clone();
+        move || {
+            update_ui_state(&handle, &cfg, false);
+        }
+    });
+    false
+}
+
 fn main() -> Result<()> {
     std::panic::set_hook(Box::new(|info| {
         let msg = format!("PANIC: {:?}\nBacktrace:\n{:?}", info, std::backtrace::Backtrace::capture());
@@ -239,8 +297,29 @@ fn main() -> Result<()> {
         .build()
         .context("Failed to build system tray icon")?;
 
-    let supervisor = Arc::new(Mutex::new(Supervisor::new().0));
+    let (sup_inst, mut state_rx) = Supervisor::new();
+    let supervisor = Arc::new(Mutex::new(sup_inst));
     let is_connected = Arc::new(AtomicBool::new(false));
+
+    let handle_state = main_handle.clone();
+    let conn_state = is_connected.clone();
+    tokio::spawn(async move {
+        loop {
+            match state_rx.recv().await {
+                Ok(state) => {
+                    let connected = matches!(state, TunnelState::Connected);
+                    conn_state.store(connected, Ordering::SeqCst);
+                    let cfg = Config::load().unwrap_or_default();
+                    let handle = handle_state.clone();
+                    let _ = slint::invoke_from_event_loop(move || {
+                        update_ui_state(&handle, &cfg, connected);
+                    });
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+                Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+            }
+        }
+    });
 
     // 2. Initialize state from config
     let cfg = Config::load().unwrap_or_default();
@@ -250,22 +329,9 @@ fn main() -> Result<()> {
     if !cfg.api_token.is_empty() && !cfg.routes_disabled {
         let sup = supervisor.clone();
         let conn = is_connected.clone();
-        let token = cfg.api_token.clone();
+        let handle = main_handle.clone();
         tokio::spawn(async move {
-            if let Ok(client) = CloudflareClient::new(token) {
-                if let Ok(accounts) = client.list_accounts().await {
-                    if let Some(acc) = accounts.first() {
-                        if let Ok(tunnel) = client.get_or_create_tunnel(&acc.id, "quickflare").await {
-                            if let Ok(run_token) = client.get_tunnel_token(&acc.id, &tunnel.id).await {
-                                let mut s = sup.lock().await;
-                                if s.start(&run_token).await.is_ok() {
-                                    conn.store(true, Ordering::SeqCst);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            start_tunnel_session(sup, conn, handle).await;
         });
     }
 
@@ -294,10 +360,21 @@ fn main() -> Result<()> {
                     }
                     IpcRequest::Reload => {
                         let cfg = Config::load().unwrap_or_default();
-                        let connected = conn.load(Ordering::SeqCst);
-                        let _ = slint::invoke_from_event_loop(move || {
-                            update_ui_state(&handle, &cfg, connected);
-                        });
+                        if cfg.routes_disabled {
+                            let mut s = sup.lock().await;
+                            let _ = s.stop().await;
+                            conn.store(false, Ordering::SeqCst);
+                            let _ = slint::invoke_from_event_loop(move || {
+                                update_ui_state(&handle, &cfg, false);
+                            });
+                        } else if !conn.load(Ordering::SeqCst) {
+                            start_tunnel_session(sup, conn, handle).await;
+                        } else {
+                            let connected = conn.load(Ordering::SeqCst);
+                            let _ = slint::invoke_from_event_loop(move || {
+                                update_ui_state(&handle, &cfg, connected);
+                            });
+                        }
                         IpcResponse::Ok
                     }
                     IpcRequest::Open => {
@@ -332,22 +409,26 @@ fn main() -> Result<()> {
     // 5. Connect UI Callbacks
     let handle_for_pause = main_handle.clone();
     let sup_pause = supervisor.clone();
+    let conn_pause = is_connected.clone();
     main_window.on_toggle_pause_all(move || {
         let handle = handle_for_pause.clone();
         let sup = sup_pause.clone();
+        let conn = conn_pause.clone();
         tokio::spawn(async move {
             let mut cfg = Config::load().unwrap_or_default();
             cfg.routes_disabled = !cfg.routes_disabled;
             let _ = cfg.save();
 
-            let mut s = sup.lock().await;
             if cfg.routes_disabled {
+                let mut s = sup.lock().await;
                 let _ = s.stop().await;
+                conn.store(false, Ordering::SeqCst);
+                let _ = slint::invoke_from_event_loop(move || {
+                    update_ui_state(&handle, &cfg, false);
+                });
+            } else {
+                start_tunnel_session(sup, conn, handle).await;
             }
-
-            let _ = slint::invoke_from_event_loop(move || {
-                update_ui_state(&handle, &cfg, !cfg.routes_disabled);
-            });
         });
     });
 
@@ -407,6 +488,18 @@ fn main() -> Result<()> {
                 if !cfg.api_token.is_empty() {
                     if let Ok(client) = CloudflareClient::new(cfg.api_token.clone()) {
                         let _ = client.delete_dns_cname(&route.zone_id, &route.hostname).await;
+
+                        if let Ok(accounts) = client.list_accounts().await {
+                            if let Some(acc) = accounts.first() {
+                                if let Ok(tunnel) = client.get_or_create_tunnel(&acc.id, "quickflare").await {
+                                    let rules: Vec<IngressRule> = cfg.routes.iter().map(|r| IngressRule {
+                                        hostname: Some(r.hostname.clone()),
+                                        service: r.target.clone(),
+                                    }).collect();
+                                    let _ = client.update_ingress_rules(&acc.id, &tunnel.id, rules).await;
+                                }
+                            }
+                        }
                     }
                 }
                 let _ = cfg.save();
@@ -481,6 +574,7 @@ fn main() -> Result<()> {
     let id_quit = item_quit.id().clone();
     let handle_menu = main_handle.clone();
     let sup_menu = supervisor.clone();
+    let conn_menu = is_connected.clone();
     let is_visible_menu = is_window_visible.clone();
     tokio::task::spawn_blocking(move || {
         loop {
@@ -498,12 +592,14 @@ fn main() -> Result<()> {
                 } else if event.id == id_pause {
                     let sup = sup_menu.clone();
                     let h = handle_menu.clone();
+                    let conn = conn_menu.clone();
                     tokio::spawn(async move {
                         let mut cfg = Config::load().unwrap_or_default();
                         cfg.routes_disabled = true;
                         let _ = cfg.save();
                         let mut s = sup.lock().await;
                         let _ = s.stop().await;
+                        conn.store(false, Ordering::SeqCst);
                         let _ = slint::invoke_from_event_loop(move || {
                             update_ui_state(&h, &cfg, false);
                         });
@@ -511,30 +607,12 @@ fn main() -> Result<()> {
                 } else if event.id == id_resume {
                     let sup = sup_menu.clone();
                     let h = handle_menu.clone();
+                    let conn = conn_menu.clone();
                     tokio::spawn(async move {
                         let mut cfg = Config::load().unwrap_or_default();
                         cfg.routes_disabled = false;
                         let _ = cfg.save();
-                        let mut connected = false;
-                        if !cfg.api_token.is_empty() {
-                            if let Ok(client) = CloudflareClient::new(cfg.api_token.clone()) {
-                                if let Ok(accounts) = client.list_accounts().await {
-                                    if let Some(acc) = accounts.first() {
-                                        if let Ok(tunnel) = client.get_or_create_tunnel(&acc.id, "quickflare").await {
-                                            if let Ok(run_token) = client.get_tunnel_token(&acc.id, &tunnel.id).await {
-                                                let mut s = sup.lock().await;
-                                                if s.start(&run_token).await.is_ok() {
-                                                    connected = true;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        let _ = slint::invoke_from_event_loop(move || {
-                            update_ui_state(&h, &cfg, connected);
-                        });
+                        start_tunnel_session(sup, conn, h).await;
                     });
                 } else if event.id == id_quit {
                     let sup = sup_menu.clone();

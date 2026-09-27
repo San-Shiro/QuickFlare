@@ -86,29 +86,18 @@ impl Supervisor {
                         let _ = state_tx_err.send(TunnelState::Reconnecting);
                     }
                 }
-                if running_err.load(Ordering::SeqCst) {
+                if running_err.swap(false, Ordering::SeqCst) {
+                    tracing::info!("cloudflared process pipe closed; marking tunnel as stopped");
                     let _ = state_tx_err.send(TunnelState::Stopped);
                 }
             });
         }
 
-        let state_tx_out = self.state_tx.clone();
-        let running_out = self.running.clone();
         if let Some(out) = stdout {
             tokio::spawn(async move {
                 let mut lines = BufReader::new(out).lines();
                 while let Ok(Some(line)) = lines.next_line().await {
                     tracing::debug!("[cloudflared stdout] {}", line);
-                    if line.contains("Registered tunnel connection")
-                        || (line.contains("Connection") && line.contains("registered"))
-                    {
-                        let _ = state_tx_out.send(TunnelState::Connected);
-                    } else if line.contains("Retrying connection in") {
-                        let _ = state_tx_out.send(TunnelState::Reconnecting);
-                    }
-                }
-                if running_out.load(Ordering::SeqCst) {
-                    let _ = state_tx_out.send(TunnelState::Stopped);
                 }
             });
         }

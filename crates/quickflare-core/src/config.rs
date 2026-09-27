@@ -38,10 +38,23 @@ pub struct Config {
 }
 
 impl Config {
-    /// Returns the default path to config.json (%APPDATA%\QuickFlare\config.json).
+    /// Returns the default path to config.json (%LOCALAPPDATA%\QuickFlare\config.json),
+    /// falling back to %APPDATA%\QuickFlare\config.json if already present.
     pub fn file_path() -> Result<PathBuf> {
-        let base = dirs::config_dir().context("Failed to locate user config directory")?;
-        Ok(base.join(CONFIG_DIR_NAME).join(CONFIG_FILE_NAME))
+        let local_base = dirs::data_local_dir().or_else(dirs::config_dir)
+            .context("Failed to locate user local data directory")?;
+        let local_path = local_base.join(CONFIG_DIR_NAME).join(CONFIG_FILE_NAME);
+
+        if !local_path.exists() {
+            if let Some(roaming_base) = dirs::config_dir() {
+                let roaming_path = roaming_base.join(CONFIG_DIR_NAME).join(CONFIG_FILE_NAME);
+                if roaming_path.exists() {
+                    return Ok(roaming_path);
+                }
+            }
+        }
+
+        Ok(local_path)
     }
 
     /// Loads the configuration from disk, decrypting the stored API token if present.
@@ -76,8 +89,10 @@ impl Config {
 
     /// Saves the configuration to disk atomically, encrypting the API token.
     pub fn save(&mut self) -> Result<()> {
-        let path = Self::file_path()?;
-        self.save_to_path(&path)
+        let local_base = dirs::data_local_dir().or_else(dirs::config_dir)
+            .context("Failed to locate user local data directory")?;
+        let target_path = local_base.join(CONFIG_DIR_NAME).join(CONFIG_FILE_NAME);
+        self.save_to_path(&target_path)
     }
 
     /// Saves the configuration to a specific file path atomically.
@@ -101,8 +116,10 @@ impl Config {
         std::fs::write(&tmp_path, json_data)
             .with_context(|| format!("Failed to write temporary config {:?}", tmp_path))?;
 
-        std::fs::rename(&tmp_path, path)
-            .with_context(|| format!("Failed to atomically rename config to {:?}", path))?;
+        if let Err(_) = std::fs::rename(&tmp_path, path) {
+            let _ = std::fs::copy(&tmp_path, path);
+            let _ = std::fs::remove_file(&tmp_path);
+        }
 
         Ok(())
     }
@@ -254,5 +271,32 @@ mod tests {
 
         let decrypted = unprotect_token(&encrypted).expect("unprotect should succeed");
         assert_eq!(token, decrypted);
+    }
+
+    #[test]
+    fn test_file_path_location() {
+        let path = Config::file_path().expect("should find config path");
+        assert!(path.ends_with(std::path::Path::new("QuickFlare").join("config.json")));
+    }
+
+    #[test]
+    fn test_save_load_roundtrip() {
+        let test_dir = std::env::temp_dir().join(format!("qf_test_{}_{}", std::process::id(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        let path = test_dir.join("subdir").join("config.json");
+        let mut cfg = Config {
+            api_token: "secret_123".to_string(),
+            domain: Some("test.com".to_string()),
+            routes_disabled: true,
+            ..Default::default()
+        };
+        cfg.save_to_path(&path).expect("save should succeed");
+        assert!(path.exists());
+
+        let loaded = Config::load_from_path(&path).expect("load should succeed");
+        assert_eq!(loaded.api_token, "secret_123");
+        assert_eq!(loaded.domain, Some("test.com".to_string()));
+        assert!(loaded.routes_disabled);
+
+        let _ = std::fs::remove_dir_all(&test_dir);
     }
 }

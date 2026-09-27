@@ -85,24 +85,36 @@ end;
 procedure RemoveAppFromPath();
 var
   currentPath: string;
+  newPath: string;
   appDir: string;
+  part: string;
   p: Integer;
 begin
-  appDir := ExpandConstant('{app}');
+  appDir := Trim(ExpandConstant('{app}'));
   if RegQueryStringValue(HKCU, 'Environment', 'Path', currentPath) then
   begin
-    p := Pos(UpperCase(appDir) + ';', UpperCase(currentPath));
-    if p > 0 then
-      Delete(currentPath, p, Length(appDir) + 1)
-    else
+    newPath := '';
+    while Length(currentPath) > 0 do
     begin
-      p := Pos(';' + UpperCase(appDir), UpperCase(currentPath));
+      p := Pos(';', currentPath);
       if p > 0 then
-        Delete(currentPath, p, Length(appDir) + 1)
-      else if UpperCase(currentPath) = UpperCase(appDir) then
+      begin
+        part := Trim(Copy(currentPath, 1, p - 1));
+        Delete(currentPath, 1, p);
+      end
+      else
+      begin
+        part := Trim(currentPath);
         currentPath := '';
+      end;
+      if (Length(part) > 0) and (CompareText(part, appDir) <> 0) then
+      begin
+        if Length(newPath) > 0 then
+          newPath := newPath + ';';
+        newPath := newPath + part;
+      end;
     end;
-    RegWriteStringValue(HKCU, 'Environment', 'Path', currentPath);
+    RegWriteStringValue(HKCU, 'Environment', 'Path', newPath);
     RefreshEnvironment();
   end;
 end;

@@ -76,7 +76,9 @@ pub mod windows {
                             if let Ok(req) = serde_json::from_slice::<IpcRequest>(&buf[..n]) {
                                 let resp = handler_clone(req).await;
                                 if let Ok(resp_bytes) = serde_json::to_vec(&resp) {
-                                    let _ = server.write_all(&resp_bytes).await;
+                                    if server.write_all(&resp_bytes).await.is_ok() {
+                                        let _ = server.flush().await;
+                                    }
                                 }
                             }
                         }
@@ -93,7 +95,7 @@ pub mod windows {
             use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
             let mut client = None;
-            for _ in 0..3 {
+            for _ in 0..10 {
                 match ClientOptions::new().open(IPC_PIPE_NAME) {
                     Ok(c) => {
                         client = Some(c);
