@@ -255,6 +255,7 @@ fn main() -> Result<()> {
     };
 
     let main_window = MainWindow::new().context("Failed to initialize Slint MainWindow")?;
+    main_window.set_app_version(format!("v{}", env!("CARGO_PKG_VERSION")).into());
     let main_handle = main_window.as_weak();
     let is_window_visible = Arc::new(AtomicBool::new(true));
 

@@ -108,7 +108,7 @@ Two things to know before using it:
 
 ```bash
 # Windows tray app
-go build -ldflags "-H windowsgui -s -w" -o build/QuickFlare-0.4.5.exe ./cmd/quickflare
+go build -ldflags "-H windowsgui -s -w" -o build/QuickFlare-0.4.6.exe ./cmd/quickflare
 
 # Linux CLI - cross-compiles from anywhere, no cgo
 GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o build/quickflare ./cmd/quickflare-cli

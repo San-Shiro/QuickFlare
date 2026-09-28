@@ -398,7 +398,7 @@ func (p *Panel) settingsRows() []layout.Widget {
 	rows = append(rows,
 		vgap(sp7),
 		p.sectionLabel("Engine & Version"),
-		p.statRow("QuickFlare", "v0.4.5"),
+		p.statRow("QuickFlare", "v0.4.6"),
 		p.statRow("Cloudflare", engineVer),
 	)
 
