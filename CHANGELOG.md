@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.4.7 - 2026-09-30
+
+- **Integrated Bug Reporting & Diagnostics**: Added one-click GitHub issue reporting and instant log directory access in both the desktop Settings view and the system tray menu.
+- **CLI Diagnostics & Version Commands**: Added `quickflare version` (`-v`) and `quickflare issue` commands to quickly inspect versions and report bugs from the terminal.
+- **Deep Uninstallation & State Cleanup**: Enhanced Inno Setup uninstaller to completely wipe runtime artifacts (`bin\`, `logs\`, `config.json`, `tray.log`), leaving zero residual files upon uninstallation.
+- **Pure Native Go Gio Desktop Architecture**: Retained and polished the Gio UI desktop app with dark mode, fluid transitions, and seamless Windows DWM integration.
+
 ## v0.4.6 - 2026-09-26
 
 - Fixed tray icon click not opening window due to duplicate mouse-down/up event triggers.

@@ -23,6 +23,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/San-Shiro/QuickFlare/internal/installer"
 )
 
 const usageText = `quickflare - publish a localhost port through Cloudflare Tunnel
@@ -99,6 +101,14 @@ func main() {
 		err = cmdReinstall(ctx, args)
 	case "uninstall":
 		err = cmdUninstall(ctx, args)
+	case "version", "-v", "--version":
+		fmt.Printf("QuickFlare v%s\n", installer.Version)
+		return
+	case "issue", "bug-report":
+		fmt.Printf("QuickFlare v%s\n", installer.Version)
+		fmt.Println("Report issues and view troubleshooting guides at:")
+		fmt.Println("https://github.com/San-Shiro/QuickFlare/issues/new?template=bug_report.md")
+		return
 	case "help", "-h", "--help":
 		fmt.Print(usageText)
 		return

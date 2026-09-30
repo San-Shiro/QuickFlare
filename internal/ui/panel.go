@@ -19,6 +19,7 @@ import (
 	"gioui.org/widget/material"
 
 	"os"
+	"path/filepath"
 
 	"github.com/San-Shiro/QuickFlare/internal/autostart"
 	"github.com/San-Shiro/QuickFlare/internal/cloudflare"
@@ -214,6 +215,8 @@ type Panel struct {
 	setupList    layout.List
 	tokenEd      widget.Editor
 	verifyBtn    widget.Clickable
+	reportBugBtn widget.Clickable
+	openLogsBtn  widget.Clickable
 
 	// Main panel
 	closeBtn    widget.Clickable
@@ -277,6 +280,9 @@ const (
 
 	// guideURL is the dedicated step-by-step Cloudflare API token setup guide.
 	guideURL = "https://github.com/San-Shiro/QuickFlare/blob/main/docs/CLOUDFLARE_API_TOKEN.md"
+
+	// bugReportURL opens the GitHub bug report form.
+	bugReportURL = "https://github.com/San-Shiro/QuickFlare/issues/new?template=bug_report.md"
 
 	// copiedFor is how long a pill shows its copied confirmation.
 	copiedFor = 1600 * time.Millisecond
@@ -975,6 +981,12 @@ func (p *Panel) handleInput(gtx layout.Context) {
 		if p.restoreStateBtn.Clicked(gtx) {
 			p.toggleRestoreLastState()
 		}
+		if p.reportBugBtn.Clicked(gtx) {
+			_ = openURL(bugReportURL)
+		}
+		if p.openLogsBtn.Clicked(gtx) {
+			p.openLogsDirectory()
+		}
 
 	case viewMain:
 		p.handleMainInput(gtx)
@@ -1650,4 +1662,15 @@ func (p *Panel) layout(gtx layout.Context) layout.Dimensions {
 	}
 
 	return dims
+}
+
+// openLogsDirectory opens the local QuickFlare logs directory in File Explorer.
+func (p *Panel) openLogsDirectory() {
+	dir, err := config.Dir()
+	if err == nil {
+		logsDir := filepath.Join(dir, "logs")
+		if err := openFolder(logsDir); err != nil {
+			_ = openFolder(dir)
+		}
+	}
 }

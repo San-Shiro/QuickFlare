@@ -1,5 +1,5 @@
 #ifndef Version
-#define Version "0.4.6"
+#define Version "0.4.7"
 #endif
 
 [Setup]
@@ -42,6 +42,16 @@ Name: "{userstartup}\QuickFlare"; Filename: "{app}\quickflare-tray.exe"; Tasks: 
 
 [Run]
 Filename: "{app}\quickflare-tray.exe"; Description: "Launch QuickFlare"; Flags: postinstall nowait skipifsilent shellexec runascurrentuser; Tasks: trayapp
+
+[UninstallDelete]
+Type: files; Name: "{app}\config.json"
+Type: files; Name: "{app}\tray.log"
+Type: files; Name: "{app}\crash_report.json"
+Type: files; Name: "{app}\*.log"
+Type: files; Name: "{app}\*.json"
+Type: filesandordirs; Name: "{app}\bin"
+Type: filesandordirs; Name: "{app}\logs"
+Type: dirifempty; Name: "{app}"
 
 [Code]
 const
@@ -163,14 +173,23 @@ end;
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   resultCode: Integer;
+  appDir: String;
 begin
   if CurUninstallStep = usUninstall then
   begin
-    Exec('taskkill.exe', '/F /IM quickflare-tray.exe /IM quickflare.exe', '', SW_HIDE, ewWaitUntilTerminated, resultCode);
+    Exec('taskkill.exe', '/F /IM quickflare-tray.exe /IM quickflare.exe /IM cloudflared.exe', '', SW_HIDE, ewWaitUntilTerminated, resultCode);
     if MsgBox('Do you want to gracefully tear down and unpublish all active Cloudflare routes via API before removing QuickFlare?' + #13#10 + #13#10 + '(Recommended: Yes)', mbConfirmation, MB_YESNO or MB_DEFBUTTON1) = IDYES then
     begin
-      Exec(ExpandConstant('{app}\quickflare.exe'), 'uninstall --silent --routes-only', '', SW_HIDE, ewWaitUntilTerminated, resultCode);
+      Exec(ExpandConstant('{app}\quickflare.exe'), 'uninstall -routes-only -y', '', SW_HIDE, ewWaitUntilTerminated, resultCode);
     end;
     RemoveAppFromPath();
+  end
+  else if CurUninstallStep = usPostUninstall then
+  begin
+    appDir := ExpandConstant('{app}');
+    if DirExists(appDir) then
+    begin
+      DelTree(appDir, True, True, True);
+    end;
   end;
 end;

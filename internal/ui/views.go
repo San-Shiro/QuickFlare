@@ -398,8 +398,25 @@ func (p *Panel) settingsRows() []layout.Widget {
 	rows = append(rows,
 		vgap(sp7),
 		p.sectionLabel("Engine & Version"),
-		p.statRow("QuickFlare", "v0.4.6"),
+		p.statRow("QuickFlare", "v0.4.7"),
 		p.statRow("Cloudflare", engineVer),
+		vgap(sp7),
+		p.sectionLabel("Diagnostics & Support"),
+		func(gtx layout.Context) layout.Dimensions {
+			return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					gtx.Constraints.Min.X = 0
+					gtx.Constraints.Max.X = gtx.Dp(unit.Dp(136))
+					return p.secondaryButton(gtx, &p.reportBugBtn, "Report issue")
+				}),
+				layout.Rigid(hgap(sp4)),
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					gtx.Constraints.Min.X = 0
+					gtx.Constraints.Max.X = gtx.Dp(unit.Dp(124))
+					return p.secondaryButton(gtx, &p.openLogsBtn, "Open logs")
+				}),
+			)
+		},
 	)
 
 	return append(rows, vgap(sp5))

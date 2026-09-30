@@ -128,6 +128,10 @@ func onReady(p *Panel) {
 	}
 
 	systray.AddSeparator()
+	mReport := systray.AddMenuItem("Report an Issue...", "Report a bug or problem on GitHub")
+	mLogs := systray.AddMenuItem("Open Logs Folder", "View diagnostic log files")
+
+	systray.AddSeparator()
 	mQuit := systray.AddMenuItem("Quit", "Exit QuickFlare")
 
 	startupClicks := make(chan struct{})
@@ -160,6 +164,12 @@ func onReady(p *Panel) {
 				} else {
 					mStartup.Uncheck()
 				}
+
+			case <-mReport.ClickedCh:
+				_ = openURL(bugReportURL)
+
+			case <-mLogs.ClickedCh:
+				p.openLogsDirectory()
 
 			case <-mQuit.ClickedCh:
 				systray.Quit()

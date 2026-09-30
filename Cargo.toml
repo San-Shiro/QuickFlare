@@ -2,7 +2,6 @@
 members = [
     "crates/quickflare-core",
     "crates/quickflare-cli",
-    "crates/quickflare-tray",
 ]
 resolver = "2"
 
