@@ -6,9 +6,15 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"syscall"
+	"unsafe"
+
+	"golang.org/x/sys/windows"
+)
+
+var (
+	shell32           = windows.NewLazySystemDLL("shell32.dll")
+	procShellExecuteW = shell32.NewProc("ShellExecuteW")
 )
 
 func findTrayExecutable() (string, error) {
@@ -48,12 +54,23 @@ func startTrayProcess() error {
 		return err
 	}
 
-	cmd := exec.Command(bin)
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP | 0x00000008, // DETACHED_PROCESS
-	}
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("launch %s: %w", bin, err)
+	verb, _ := windows.UTF16PtrFromString("open")
+	file, _ := windows.UTF16PtrFromString(bin)
+	dir, _ := windows.UTF16PtrFromString(filepath.Dir(bin))
+
+	// ShellExecuteW delegates launching to Windows Shell (explorer.exe),
+	// completely decoupling the tray application from the caller's console,
+	// terminal Job Object, and process group.
+	ret, _, _ := procShellExecuteW.Call(
+		0,
+		uintptr(unsafe.Pointer(verb)),
+		uintptr(unsafe.Pointer(file)),
+		0,
+		uintptr(unsafe.Pointer(dir)),
+		windows.SW_SHOWNORMAL,
+	)
+	if ret <= 32 {
+		return fmt.Errorf("ShellExecute failed with error code %d", ret)
 	}
 	return nil
 }

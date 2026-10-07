@@ -4,6 +4,10 @@ import (
 	"context"
 	"fmt"
 	"image/color"
+	"log"
+	"os"
+	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -17,9 +21,6 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-
-	"os"
-	"path/filepath"
 
 	"github.com/San-Shiro/QuickFlare/internal/autostart"
 	"github.com/San-Shiro/QuickFlare/internal/cloudflare"
@@ -289,8 +290,18 @@ const (
 )
 
 func NewPanel() *Panel {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[panel] FATAL PANIC in NewPanel: %v\nStack trace:\n%s", r, debug.Stack())
+		}
+	}()
+	log.Printf("[panel] NewPanel: creating material.NewTheme()...")
 	th := material.NewTheme()
-	th.Shaper = text.NewShaper(text.WithCollection(loadFontCollection()))
+	log.Printf("[panel] NewPanel: loading fonts...")
+	fonts := loadFontCollection()
+	log.Printf("[panel] NewPanel: fonts loaded (%d faces), creating text.NewShaper...", len(fonts))
+	th.Shaper = text.NewShaper(text.WithCollection(fonts))
+	log.Printf("[panel] NewPanel: text.NewShaper created")
 	th.Palette = material.Palette{
 		Bg:         colBackground,
 		Fg:         colTextPrimary,
@@ -298,7 +309,9 @@ func NewPanel() *Panel {
 		ContrastFg: colBackground,
 	}
 
+	log.Printf("[panel] NewPanel: allocating app.Window...")
 	w := new(app.Window)
+	log.Printf("[panel] NewPanel: calling w.Option()...")
 	w.Option(
 		app.Title("QuickFlare"),
 		app.Size(panelW, panelH),
@@ -307,7 +320,9 @@ func NewPanel() *Panel {
 		app.Decorated(false),
 		app.TopMost(true),
 	)
+	log.Printf("[panel] NewPanel: w.Option() completed")
 
+	log.Printf("[panel] NewPanel: initializing Panel struct...")
 	p := &Panel{
 		w:          w,
 		th:         th,
@@ -323,10 +338,16 @@ func NewPanel() *Panel {
 	p.connList.Axis = layout.Vertical
 	p.setupList.Axis = layout.Vertical
 
+	log.Printf("[panel] NewPanel: locating cloudflared binary...")
 	p.binPath, p.binErr = supervisor.FindBinary()
+	log.Printf("[panel] NewPanel: binPath=%q, binErr=%v", p.binPath, p.binErr)
+
+	log.Printf("[panel] NewPanel: probing engine version...")
 	p.cfEngineVersion = supervisor.EngineVersion(p.binPath)
+	log.Printf("[panel] NewPanel: engineVersion=%q", p.cfEngineVersion)
 
 	if autostart.Supported() {
+		log.Printf("[panel] NewPanel: checking autostart status...")
 		p.autostartOn, _ = autostart.Enabled()
 		// Repoint a stale entry at this build. Silent on failure: a broken
 		// startup entry is worth fixing, not worth a startup error dialog.
@@ -335,7 +356,9 @@ func NewPanel() *Panel {
 		}
 	}
 
+	log.Printf("[panel] NewPanel: restoring configuration...")
 	p.restore()
+	log.Printf("[panel] NewPanel completed successfully")
 	return p
 }
 
@@ -808,36 +831,58 @@ func (p *Panel) hasStartingRoutes() bool {
 // this package has come from. A 150ms poll cannot wedge the message pump.
 func (p *Panel) watchFocus() {
 	const (
-		tick = 150 * time.Millisecond
-		// Long enough for the foreground to actually land on the panel after
-		// Show; below about 250ms the watcher races the window it is
-		// watching and closes it on the way up.
-		grace = 350 * time.Millisecond
+		tick           = 150 * time.Millisecond
+		initialGrace   = 350 * time.Millisecond
+		maxAcquireTime = 2500 * time.Millisecond
 	)
 
 	t := time.NewTicker(tick)
 	defer t.Stop()
+	var hadFocus bool
+	var lastShown time.Time
+
 	for range t.C {
 		p.mu.Lock()
 		h, visible, shownAt := p.hwnd, p.visible, p.shownAt
 		p.mu.Unlock()
 
-		if h == 0 || !visible || time.Since(shownAt) < grace {
+		if h == 0 || !visible {
+			hadFocus = false
+			continue
+		}
+
+		if shownAt != lastShown {
+			lastShown = shownAt
+			hadFocus = false
+		}
+
+		sinceShow := time.Since(shownAt)
+		if sinceShow < initialGrace {
 			continue
 		}
 
 		fg := Foreground()
-		if fg == 0 || fg == h {
+		if fg == 0 {
 			continue
 		}
 
-		p.mu.Lock()
-		p.visible = false
-		p.autoHidAt = time.Now()
-		p.mu.Unlock()
+		if fg == h {
+			hadFocus = true
+			continue
+		}
 
-		dbg("foreground moved to %#x; closing panel", fg)
-		p.hidePanel(h)
+		// Foreground is on another window (fg != h).
+		// Close only if the panel has already held foreground, or if the maximum
+		// acquisition window has passed without acquiring foreground.
+		if hadFocus || sinceShow > maxAcquireTime {
+			p.mu.Lock()
+			p.visible = false
+			p.autoHidAt = time.Now()
+			p.mu.Unlock()
+
+			dbg("foreground moved to %#x (hadFocus=%v); closing panel", fg, hadFocus)
+			p.hidePanel(h)
+		}
 	}
 }
 

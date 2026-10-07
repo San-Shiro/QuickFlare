@@ -2,7 +2,10 @@ package ui
 
 import (
 	_ "embed"
+	"log"
 	"os"
+	"runtime"
+	"runtime/debug"
 
 	"fyne.io/systray"
 	"gioui.org/app"
@@ -20,13 +23,23 @@ var trayIconDisabled []byte
 // Run wires the tray to the panel and blocks.
 //
 // Threading: Gio requires app.Main() on the main goroutine, so systray and the
-// panel's event loop each get their own. systray.Run locks its own OS thread
-// internally, which is what lets the two message loops coexist on Windows.
+// panel's event loop each get their own. systray.Run must lock its dedicated OS thread
+// so the Win32 message queue (bound to the thread creating the SystrayClass window)
+// is permanently pumped by GetMessage without being preempted or migrated by Go's scheduler.
 func Run() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[tray] FATAL PANIC in Run: %v\nStack trace:\n%s", r, debug.Stack())
+		}
+	}()
+	log.Printf("[tray] Initializing panel...")
 	p := NewPanel()
+	log.Printf("[tray] Panel initialized successfully")
 
-	ipcServer, _ := ipc.StartServer(ipc.Handlers{
+	log.Printf("[tray] Starting IPC server...")
+	ipcServer, err := ipc.StartServer(ipc.Handlers{
 		OnQuit: func() {
+			log.Printf("[tray] OnQuit received via IPC")
 			p.Shutdown()
 			systray.Quit()
 			os.Exit(0)
@@ -44,6 +57,7 @@ func Run() {
 			return nil
 		},
 		OnOpen: func() error {
+			log.Printf("[tray] OnOpen received via IPC")
 			p.Open()
 			return nil
 		},
@@ -51,19 +65,31 @@ func Run() {
 			return p.StatusData()
 		},
 	})
+	if err != nil {
+		log.Printf("[tray] Warning: IPC server failed to start: %v", err)
+	} else {
+		log.Printf("[tray] IPC server started successfully")
+	}
 	if ipcServer != nil {
 		defer ipcServer.Close()
 	}
 
-	go systray.Run(func() { onReady(p) }, func() {
-		if ipcServer != nil {
-			_ = ipcServer.Close()
-		}
-		onExit(p)
-	})
+	go func() {
+		runtime.LockOSThread()
+		AttachDefaultDesktop()
+		log.Printf("[tray] Entering systray.Run event loop...")
+		systray.Run(func() { onReady(p) }, func() {
+			if ipcServer != nil {
+				_ = ipcServer.Close()
+			}
+			onExit(p)
+		})
+	}()
 
 	go func() {
+		log.Printf("[tray] Entering panel.Loop event loop...")
 		err := p.Loop()
+		log.Printf("[tray] panel.Loop exited (err: %v)", err)
 		p.Shutdown()
 		if ipcServer != nil {
 			_ = ipcServer.Close()
@@ -72,12 +98,15 @@ func Run() {
 			os.Exit(1)
 		}
 		systray.Quit()
+		os.Exit(0)
 	}()
 
 	app.Main()
+	log.Printf("[tray] app.Main() returned! Exiting Run().")
 }
 
 func onReady(p *Panel) {
+	log.Printf("[tray] Systray onReady: configuring icon, menu, and callbacks...")
 	initialDisabled := p.IsDisabled()
 	if initialDisabled {
 		systray.SetIcon(trayIconDisabled)
@@ -187,6 +216,7 @@ func onReady(p *Panel) {
 // serving after the app was gone, with no UI left to stop them. The only
 // place that can now be fixed is here, before the process dies.
 func onExit(p *Panel) {
+	log.Printf("[tray] Systray onExit: shutting down tunnels and exiting")
 	p.Shutdown()
 	os.Exit(0)
 }

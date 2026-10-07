@@ -30,8 +30,17 @@ var (
 	procShowWindowAsync = user32.NewProc("ShowWindowAsync")
 	procGetWindowLong   = user32.NewProc("GetWindowLongPtrW")
 	procSetWindowLong   = user32.NewProc("SetWindowLongPtrW")
-	procSetLayeredAttrs = user32.NewProc("SetLayeredWindowAttributes")
-	procGetForeground   = user32.NewProc("GetForegroundWindow")
+	procSetLayeredAttrs          = user32.NewProc("SetLayeredWindowAttributes")
+	procGetForeground            = user32.NewProc("GetForegroundWindow")
+	procGetWindowThreadProcessId = user32.NewProc("GetWindowThreadProcessId")
+	procAttachThreadInput        = user32.NewProc("AttachThreadInput")
+	procBringWindowToTop         = user32.NewProc("BringWindowToTop")
+	procAllowSetForegroundWindow = user32.NewProc("AllowSetForegroundWindow")
+	procOpenDesktop              = user32.NewProc("OpenDesktopW")
+	procSetThreadDesktop         = user32.NewProc("SetThreadDesktop")
+
+	kernel32               = windows.NewLazySystemDLL("kernel32.dll")
+	procGetCurrentThreadId = kernel32.NewProc("GetCurrentThreadId")
 )
 
 type point struct{ X, Y int32 }
@@ -178,9 +187,26 @@ func AnchorToTray(hwnd uintptr) {
 
 // Focus brings the panel forward so keystrokes land in it.
 func Focus(hwnd uintptr) {
-	if hwnd != 0 {
-		procSetForeground.Call(hwnd)
+	if hwnd == 0 {
+		return
 	}
+	const asfwAny = ^uintptr(0) // -1
+	procAllowSetForegroundWindow.Call(asfwAny)
+
+	fgWnd, _, _ := procGetForeground.Call()
+	if fgWnd != hwnd {
+		curTid, _, _ := procGetWindowThreadProcessId.Call(fgWnd, 0)
+		thisTid, _, _ := procGetCurrentThreadId.Call()
+		if curTid != 0 && thisTid != 0 && curTid != thisTid {
+			procAttachThreadInput.Call(thisTid, curTid, 1)
+			procBringWindowToTop.Call(hwnd)
+			procSetForeground.Call(hwnd)
+			procAttachThreadInput.Call(thisTid, curTid, 0)
+			return
+		}
+	}
+	procBringWindowToTop.Call(hwnd)
+	procSetForeground.Call(hwnd)
 }
 
 // Show makes the panel visible without stealing focus; Hide removes it. Gio
@@ -307,4 +333,19 @@ func HideFromTaskbar(hwnd uintptr) {
 	next := (cur &^ wsExAppWindow) | wsExToolWindow
 	ret, _, err := procSetWindowLong.Call(hwnd, gwlExStyle, next)
 	dbg("ex-style %#x -> %#x ret=%d err=%v", cur, next, ret, err)
+}
+
+// AttachDefaultDesktop attaches the calling OS thread to the interactive "Default" desktop.
+// Must be called immediately after runtime.LockOSThread() on a new goroutine, before that thread
+// creates any windows or initializes GUI resources.
+func AttachDefaultDesktop() {
+	deskName, err := windows.UTF16PtrFromString("Default")
+	if err != nil {
+		return
+	}
+	const desktopAllAccess = 0x01FF
+	hDesk, _, _ := procOpenDesktop.Call(uintptr(unsafe.Pointer(deskName)), 0, 0, desktopAllAccess)
+	if hDesk != 0 {
+		procSetThreadDesktop.Call(hDesk)
+	}
 }

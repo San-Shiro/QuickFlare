@@ -31,3 +31,5 @@ func SetAlpha(hwnd uintptr, a uint8) {}
 // Foreground returning 0 means "unknown", which the focus watcher reads as
 // "do not act" - so the panel simply never auto-hides off Windows.
 func Foreground() uintptr { return 0 }
+
+func AttachDefaultDesktop() {}
