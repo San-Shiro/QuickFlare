@@ -138,16 +138,25 @@ func (t *Tunnel) Stop() {
 // run owns the restart loop.
 func (t *Tunnel) run(ctx context.Context, token string) {
 	backoff := time.Second
-	const maxBackoff = 30 * time.Second
+	const (
+		maxBackoff       = 30 * time.Second
+		stableResetAfter = 60 * time.Second
+	)
 
 	for {
 		if ctx.Err() != nil {
 			return
 		}
 
+		runStart := time.Now()
 		err := t.runOnce(ctx, token)
 		if ctx.Err() != nil {
 			return
+		}
+
+		// Reset backoff to base if the connector was stably running for >= 60s
+		if time.Since(runStart) >= stableResetAfter {
+			backoff = time.Second
 		}
 
 		t.setState(StateReconnecting, 0, err)

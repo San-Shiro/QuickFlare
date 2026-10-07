@@ -149,11 +149,10 @@ func (c *Client) PutTunnelConfig(ctx context.Context, tunnelID string, doc Tunne
 //
 // mutate receives the current rules with the catch-all already stripped, and
 // returns the rules it wants; the catch-all is re-appended on the way out.
-//
-// Caveat: the API offers no compare-and-swap, so a concurrent editor (a second
-// instance, or somebody in the dashboard) can lose writes. For a single
-// desktop owner that is acceptable; it would not be for a shared deployment.
 func (c *Client) UpdateIngress(ctx context.Context, tunnelID string, mutate func([]IngressRule) []IngressRule) error {
+	c.ingressMu.Lock()
+	defer c.ingressMu.Unlock()
+
 	doc, err := c.TunnelConfig(ctx, tunnelID)
 	if err != nil {
 		return fmt.Errorf("read tunnel config: %w", err)

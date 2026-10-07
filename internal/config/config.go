@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
+	"time"
 )
 
 // StoredRoute is a published route remembered between runs.
@@ -113,8 +115,13 @@ func Load() (*Config, error) {
 	return &c, nil
 }
 
+var saveMu sync.Mutex
+
 // Save writes the config, protecting the token on the way out.
 func (c *Config) Save() error {
+	saveMu.Lock()
+	defer saveMu.Unlock()
+
 	dir, err := Dir()
 	if err != nil {
 		return err
@@ -143,15 +150,34 @@ func (c *Config) Save() error {
 
 	path := filepath.Join(dir, "config.json")
 
-	// Write to a temp file and rename, so an interrupted write cannot leave
+	// Write to a unique temp file and rename, so an interrupted write cannot leave
 	// a half-written config that fails to parse on next launch.
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, raw, 0o600); err != nil {
+	tmp, err := os.CreateTemp(dir, "config-*.json.tmp")
+	if err != nil {
+		return fmt.Errorf("create temp config: %w", err)
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName) // no-op after successful rename
+
+	if _, err := tmp.Write(raw); err != nil {
+		tmp.Close()
 		return fmt.Errorf("write config: %w", err)
 	}
-	if err := os.Rename(tmp, path); err != nil {
-		os.Remove(tmp)
-		return fmt.Errorf("replace config: %w", err)
+	if err := tmp.Sync(); err != nil {
+		tmp.Close()
+		return fmt.Errorf("sync config: %w", err)
 	}
-	return nil
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("close temp config: %w", err)
+	}
+
+	// Rename with bounded retry to ride out transient sharing locks on Windows
+	var renameErr error
+	for attempt := 0; attempt < 8; attempt++ {
+		if renameErr = os.Rename(tmpName, path); renameErr == nil {
+			return nil
+		}
+		time.Sleep(time.Duration(10<<attempt) * time.Millisecond)
+	}
+	return fmt.Errorf("replace config: %w", renameErr)
 }

@@ -184,8 +184,10 @@ type Panel struct {
 	// tunnelID and tunnel are QuickFlare's cloudflared tunnel: the id DNS
 	// points at, and the connector process actually carrying traffic. Both
 	// are empty until ensureTunnel has run.
-	tunnelID string
-	tunnel   *supervisor.Tunnel
+	tunnelID     string
+	tunnel       *supervisor.Tunnel
+	tunnelGen    uint64
+	tunnelCancel context.CancelFunc
 
 	// closers holds one teardown func per cloudflared process started.
 	//

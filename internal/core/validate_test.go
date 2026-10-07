@@ -50,3 +50,29 @@ func TestValidateLabelRejectsWildcardExplicitly(t *testing.T) {
 		t.Error("rejection should explain why")
 	}
 }
+
+func TestNormalizeTarget(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"localhost:3000", "http://localhost:3000"},
+		{"127.0.0.1:8080", "http://127.0.0.1:8080"},
+		{"http://localhost:3000", "http://localhost:3000"},
+		{"https://localhost:8443", "https://localhost:8443"},
+		{"tcp://localhost:5432", "tcp://localhost:5432"},
+		{"  localhost:9000  ", "http://localhost:9000"},
+		{"  https://10.0.0.1:443  ", "https://10.0.0.1:443"},
+	}
+
+	for _, tt := range tests {
+		got := NormalizeTarget(tt.input)
+		if got != tt.want {
+			t.Errorf("NormalizeTarget(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+		// Test idempotency
+		if double := NormalizeTarget(got); double != got {
+			t.Errorf("NormalizeTarget not idempotent: NormalizeTarget(%q) = %q", got, double)
+		}
+	}
+}

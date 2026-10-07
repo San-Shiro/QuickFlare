@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -34,6 +35,8 @@ type Client struct {
 
 	baseURL string
 	http    *http.Client
+
+	ingressMu sync.Mutex
 }
 
 // Option configures a Client.

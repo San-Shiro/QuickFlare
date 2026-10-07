@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -142,7 +143,9 @@ func StartServer(h Handlers) (*Server, error) {
 	}
 
 	go func() {
-		_ = s.server.Serve(ln)
+		if err := s.server.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Printf("[ipc] Server Serve error: %v", err)
+		}
 	}()
 
 	return s, nil
@@ -276,7 +279,9 @@ func (s *Server) Close() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	_ = s.server.Shutdown(ctx)
+	if err := s.server.Shutdown(ctx); err != nil {
+		_ = s.server.Close()
+	}
 	_ = s.listener.Close()
 	_ = os.Remove(s.infoPath)
 	return nil

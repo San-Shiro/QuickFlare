@@ -32,6 +32,13 @@ func (p *Panel) ensureTunnel() {
 		return
 	}
 
+	p.tunnelGen++
+	gen := p.tunnelGen
+	if p.tunnelCancel != nil {
+		p.tunnelCancel()
+		p.tunnelCancel = nil
+	}
+
 	// Re-verifying (Settings -> Save) runs this again. Without stopping the
 	// previous connector first, every re-verify left another cloudflared
 	// running against the same tunnel, accumulating processes that only a
@@ -43,42 +50,60 @@ func (p *Panel) ensureTunnel() {
 
 	p.setStatus("Setting up tunnel...", colWarning)
 
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	p.tunnelCancel = cancel
+
 	binPath := p.binPath
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
 		tun, err := core.FindOrCreateTunnel(ctx, client)
 		if err != nil {
-			p.dispatch(func() {
-				p.setStatus("Tunnel setup failed: "+err.Error(), colError)
-			})
+			if ctx.Err() == nil {
+				p.dispatch(func() {
+					if p.tunnelGen == gen {
+						p.setStatus("Tunnel setup failed: "+err.Error(), colError)
+					}
+				})
+			}
 			return
 		}
 
 		token, err := client.TunnelToken(ctx, tun.ID)
 		if err != nil {
-			p.dispatch(func() {
-				p.setStatus("Could not fetch tunnel token: "+err.Error(), colError)
-			})
+			if ctx.Err() == nil {
+				p.dispatch(func() {
+					if p.tunnelGen == gen {
+						p.setStatus("Could not fetch tunnel token: "+err.Error(), colError)
+					}
+				})
+			}
+			return
+		}
+
+		// If this setup was superseded before starting the child process, bail early
+		if ctx.Err() != nil {
 			return
 		}
 
 		sup := supervisorFor(binPath)
 		if err := sup.Start(context.Background(), token); err != nil {
-			p.dispatch(func() {
-				p.setStatus("Could not start cloudflared: "+err.Error(), colError)
-			})
+			if ctx.Err() == nil {
+				p.dispatch(func() {
+					if p.tunnelGen == gen {
+						p.setStatus("Could not start cloudflared: "+err.Error(), colError)
+					}
+				})
+			}
 			return
 		}
 
-		// Registered before the dispatch lands, so a quit racing tunnel
-		// startup still tears the connector down.
+		// Registered before dispatch so a quit racing tunnel startup still cleans up
 		p.addCloser(sup.Stop)
 
 		p.dispatch(func() {
-			if p.disabled {
-				// User paused routes while connector was starting
+			if p.tunnelGen != gen || p.disabled {
+				// Superseded by a newer setup or user paused routes
 				sup.Stop()
 				return
 			}

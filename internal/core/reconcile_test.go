@@ -80,3 +80,21 @@ func keys(m map[string]Route) []string {
 	}
 	return out
 }
+
+func TestApplyReconcileDNSUnknownDoesNotClaimConnected(t *testing.T) {
+	stored := []Route{{Hostname: "degraded.example.com", Target: "localhost:8080", ZoneID: "z1"}}
+	states := map[string]*State{
+		"degraded.example.com": {DNS: DNSUnknown, InIngress: true, Target: "localhost:8080"},
+	}
+	kept, _, _ := ReconcileList(stored, states, "z1")
+	if len(kept) != 1 {
+		t.Fatalf("expected 1 kept route, got %d", len(kept))
+	}
+	if kept[0].Status == StatusConnected {
+		t.Error("route with DNSUnknown must not claim StatusConnected")
+	}
+	if kept[0].Detail != "checking DNS..." {
+		t.Errorf("expected detail 'checking DNS...', got %q", kept[0].Detail)
+	}
+}
+

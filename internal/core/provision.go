@@ -3,9 +3,21 @@ package core
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/San-Shiro/QuickFlare/internal/cloudflare"
 )
+
+// NormalizeTarget ensures that target has a valid scheme. If none is present,
+// it defaults to "http://". If target already has http://, https://, or another
+// scheme, it is preserved untouched.
+func NormalizeTarget(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	if strings.Contains(trimmed, "://") {
+		return trimmed
+	}
+	return "http://" + trimmed
+}
 
 // Provisioning: turning an intended route into something that actually
 // answers on the internet.
@@ -59,7 +71,7 @@ func Publish(ctx context.Context, client *cloudflare.Client, zoneID, tunnelID, h
 	if _, err := client.EnsureRouteCNAME(ctx, zoneID, hostname, tunnelID); err != nil {
 		return err
 	}
-	if err := client.AddRoute(ctx, tunnelID, hostname, "http://"+target); err != nil {
+	if err := client.AddRoute(ctx, tunnelID, hostname, NormalizeTarget(target)); err != nil {
 		return fmt.Errorf("ingress: %w", err)
 	}
 	return nil

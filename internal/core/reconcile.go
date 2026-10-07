@@ -23,9 +23,19 @@ import (
 // while vanishing from the UI, leaving DNS records and ingress rules nobody
 // could see or clean up.
 
+// DNSState models the verified state of a DNS CNAME record on Cloudflare.
+type DNSState int
+
+const (
+	DNSAbsent DNSState = iota
+	DNSPresent
+	DNSUnknown
+)
+
 // State is what one hostname looks like on Cloudflare.
 type State struct {
 	InDNS     bool
+	DNS       DNSState
 	InIngress bool
 	Target    string // local target, as the ingress rule has it
 }
@@ -33,8 +43,7 @@ type State struct {
 // FetchStates reads Cloudflare's view of every hostname the tunnel serves,
 // plus the DNS status of each stored route.
 //
-// A DNS lookup that errors is recorded as present rather than absent. The
-// alternative is deleting somebody's route because the network blipped.
+// A DNS lookup that errors is recorded as unknown rather than present or absent.
 func FetchStates(ctx context.Context, client *cloudflare.Client, tunnelID, defaultZone string, stored []Route) (map[string]*State, error) {
 	doc, err := client.TunnelConfig(ctx, tunnelID)
 	if err != nil {
@@ -70,10 +79,17 @@ func FetchStates(ctx context.Context, client *cloudflare.Client, tunnelID, defau
 		}
 		rec, err := client.FindDNSRecord(ctx, zone, "CNAME", r.Hostname)
 		if err != nil {
-			states[host].InDNS = true
+			states[host].DNS = DNSUnknown
+			states[host].InDNS = false
 			continue
 		}
-		states[host].InDNS = rec != nil && rec.Content == want
+		if rec != nil && rec.Content == want {
+			states[host].DNS = DNSPresent
+			states[host].InDNS = true
+		} else {
+			states[host].DNS = DNSAbsent
+			states[host].InDNS = false
+		}
 	}
 	return states, nil
 }
@@ -102,8 +118,10 @@ func ReconcileList(stored []Route, states map[string]*State, defaultZone string)
 				r.ZoneID = defaultZone
 			}
 
-			if st.InDNS && st.InIngress {
+			if (st.DNS == DNSPresent || (st.DNS == 0 && st.InDNS)) && st.InIngress {
 				r.Status, r.Detail = StatusConnected, ""
+			} else if st.DNS == DNSUnknown {
+				r.Status, r.Detail = StatusStarting, "checking DNS..."
 			} else {
 				// Not fully configured on Cloudflare (or deleted server-side):
 				// re-establish it so the stored route is healed.
