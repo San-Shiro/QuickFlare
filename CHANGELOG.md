@@ -1,7 +1,11 @@
 # Changelog
 
-## v0.4.7 - 2026-09-30
+## v0.4.7 - 2026-10-07
 
+- **Windows Tray Thread Affinity & Message Queue Stabilization**: Fixed an issue on Windows where Go scheduler OS thread migration starved the Win32 message pump of `systray`, causing the tray icon to ignore clicks and right-clicks.
+- **Auto-Hide Race & Focus Acquisition**: Re-architected panel focus management to prevent premature auto-hiding on Windows 11; integrated `AttachThreadInput`, `BringWindowToTop`, and `AllowSetForegroundWindow` for reliable foreground focus acquisition.
+- **Single-Instance Enforcement & Process Decoupling**: Added Win32 named mutex `Local\QuickFlare_Tray_SingleInstance_Mutex` with IPC forwarding so secondary launches bring up the existing window cleanly. Replaced CLI process spawning with `ShellExecuteW` to avoid termination from console job objects.
+- **Clean Process Lifecycle**: Ensured explicit teardown on Gio `DestroyEvent` to prevent zombie tray processes from lingering in the background.
 - **Integrated Bug Reporting & Diagnostics**: Added one-click GitHub issue reporting and instant log directory access in both the desktop Settings view and the system tray menu.
 - **CLI Diagnostics & Version Commands**: Added `quickflare version` (`-v`) and `quickflare issue` commands to quickly inspect versions and report bugs from the terminal.
 - **Deep Uninstallation & State Cleanup**: Enhanced Inno Setup uninstaller to completely wipe runtime artifacts (`bin\`, `logs\`, `config.json`, `tray.log`), leaving zero residual files upon uninstallation.
