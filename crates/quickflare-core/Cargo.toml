@@ -1,6 +1,6 @@
 [package]
 name = "quickflare-core"
-version = "0.4.7"
+version = "0.4.8"
 edition = "2021"
 authors = ["San-Shiro"]
 description = "Core tunnel supervision, Cloudflare API, and configuration for QuickFlare"

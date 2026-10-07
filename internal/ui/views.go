@@ -17,6 +17,7 @@ import (
 	"gioui.org/widget/material"
 
 	"github.com/San-Shiro/QuickFlare/internal/autostart"
+	"github.com/San-Shiro/QuickFlare/internal/installer"
 )
 
 // panelInset is the horizontal gutter shared by every screen.
@@ -398,7 +399,7 @@ func (p *Panel) settingsRows() []layout.Widget {
 	rows = append(rows,
 		vgap(sp7),
 		p.sectionLabel("Engine & Version"),
-		p.statRow("QuickFlare", "v0.4.7"),
+		p.statRow("QuickFlare", "v"+installer.Version),
 		p.statRow("Cloudflare", engineVer),
 		vgap(sp7),
 		p.sectionLabel("Diagnostics & Support"),

@@ -1,5 +1,5 @@
 #ifndef Version
-#define Version "0.4.7"
+#define Version "0.4.8"
 #endif
 
 [Setup]

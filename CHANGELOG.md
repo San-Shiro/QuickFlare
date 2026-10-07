@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.4.8 - 2026-10-07
+
+- Protected tunnel ingress configuration updates with a mutex to prevent concurrent route clobbering.
+- Added generational cancellation to eliminate orphaned `cloudflared` background processes on tunnel restarts.
+- Reset reconnect backoff to 1s after sustained uptime, eliminating prolonged 30s delays after temporary network drops.
+- Added tri-state DNS verification so API or network errors no longer report routes as falsely connected.
+- Implemented atomic config writes with Windows file-sharing retry logic to prevent file truncation under concurrent access.
+- Fixed target scheme normalization to preserve explicit schemes (`https://`, `tcp://`) without prepending duplicate `http://`.
+- Fixed Windows process liveness checks using signaled handle synchronization instead of unreliable exit code 259.
+
 ## v0.4.7 - 2026-10-07
 
 - **Windows Tray Thread Affinity & Message Queue Stabilization**: Fixed an issue on Windows where Go scheduler OS thread migration starved the Win32 message pump of `systray`, causing the tray icon to ignore clicks and right-clicks.
