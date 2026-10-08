@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"runtime/debug"
 
 	"github.com/San-Shiro/QuickFlare/internal/ui"
@@ -34,6 +35,8 @@ func setupLogging() *os.File {
 }
 
 func main() {
+	runtime.LockOSThread()
+	ui.AttachDefaultDesktop()
 	logFile := setupLogging()
 	if logFile != nil {
 		defer logFile.Close()

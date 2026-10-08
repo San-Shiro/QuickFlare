@@ -106,6 +106,8 @@ func Run() {
 }
 
 func onReady(p *Panel) {
+	runtime.LockOSThread()
+	AttachDefaultDesktop()
 	log.Printf("[tray] Systray onReady: configuring icon, menu, and callbacks...")
 	initialDisabled := p.IsDisabled()
 	if initialDisabled {
@@ -129,6 +131,7 @@ func onReady(p *Panel) {
 	mDisable := systray.AddMenuItem(disableTitle, "Pause or resume the Cloudflare connector")
 
 	p.OnDisableChanged(func(disabled bool) {
+		AttachDefaultDesktop()
 		if disabled {
 			mDisable.SetTitle("Enable Routes")
 			systray.SetIcon(trayIconDisabled)
