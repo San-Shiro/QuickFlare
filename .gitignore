@@ -24,3 +24,10 @@
 # Internal handoff notes, not part of the published project
 HANDOFF.md
 PORTING.md
+
+# Secrets, credentials, and local environment files
+.env*
+*.key
+*.pem
+*.pfx
+credentials.json
