@@ -38,6 +38,9 @@ var (
 	procAllowSetForegroundWindow = user32.NewProc("AllowSetForegroundWindow")
 	procOpenDesktop              = user32.NewProc("OpenDesktopW")
 	procSetThreadDesktop         = user32.NewProc("SetThreadDesktop")
+	procGetThreadDesktop         = user32.NewProc("GetThreadDesktop")
+	procGetUserObjectInformation = user32.NewProc("GetUserObjectInformationW")
+	procCloseDesktop             = user32.NewProc("CloseDesktop")
 
 	kernel32               = windows.NewLazySystemDLL("kernel32.dll")
 	procGetCurrentThreadId = kernel32.NewProc("GetCurrentThreadId")
@@ -338,14 +341,43 @@ func HideFromTaskbar(hwnd uintptr) {
 // AttachDefaultDesktop attaches the calling OS thread to the interactive "Default" desktop.
 // Must be called immediately after runtime.LockOSThread() on a new goroutine, before that thread
 // creates any windows or initializes GUI resources.
+// It checks whether the thread is already attached to "Default" to avoid leaking desktop handles.
 func AttachDefaultDesktop() {
+	const (
+		uoiName          = 2
+		desktopAllAccess = 0x01FF
+	)
+
+	tid, _, _ := procGetCurrentThreadId.Call()
+	if tid != 0 {
+		hCurrent, _, _ := procGetThreadDesktop.Call(tid)
+		if hCurrent != 0 {
+			var buf [256]uint16
+			var needed uint32
+			ret, _, _ := procGetUserObjectInformation.Call(
+				hCurrent,
+				uintptr(uoiName),
+				uintptr(unsafe.Pointer(&buf[0])),
+				uintptr(len(buf)*2),
+				uintptr(unsafe.Pointer(&needed)),
+			)
+			if ret != 0 && windows.UTF16ToString(buf[:]) == "Default" {
+				// Already on the Default desktop; no need to open or set.
+				return
+			}
+		}
+	}
+
 	deskName, err := windows.UTF16PtrFromString("Default")
 	if err != nil {
 		return
 	}
-	const desktopAllAccess = 0x01FF
 	hDesk, _, _ := procOpenDesktop.Call(uintptr(unsafe.Pointer(deskName)), 0, 0, desktopAllAccess)
 	if hDesk != 0 {
-		procSetThreadDesktop.Call(hDesk)
+		ret, _, _ := procSetThreadDesktop.Call(hDesk)
+		if ret == 0 {
+			// If SetThreadDesktop failed, close the unused handle to prevent a leak.
+			procCloseDesktop.Call(hDesk)
+		}
 	}
 }

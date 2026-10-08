@@ -61,10 +61,9 @@ def main():
     generated_pngs[512].save(standard_logo_path, format="PNG", optimize=True)
     print(f"  Wrote {standard_logo_path}")
 
-    # Copy to internal/ui/assets and cmd/quickflare-installer/assets
+    # Copy to internal/ui/assets
     destinations = [
         os.path.join(REPO_ROOT, "internal", "ui", "assets", "logo.png"),
-        os.path.join(REPO_ROOT, "cmd", "quickflare-installer", "assets", "logo.png"),
     ]
     for dst in destinations:
         os.makedirs(os.path.dirname(dst), exist_ok=True)
