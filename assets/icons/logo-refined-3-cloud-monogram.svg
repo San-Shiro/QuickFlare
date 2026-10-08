@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="QuickFlare - Cloud Ribbon Q">
+  <defs>
+    <!-- Badge -->
+    <linearGradient id="cq3-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0E1322"/>
+      <stop offset="100%" stop-color="#05070B"/>
+    </linearGradient>
+    <linearGradient id="cq3-border" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.02"/>
+    </linearGradient>
+
+    <!-- Spline Gradients -->
+    <linearGradient id="cq3-back-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#9A3412"/>
+      <stop offset="70%" stop-color="#C2410C"/>
+      <stop offset="100%" stop-color="#EA580C"/>
+    </linearGradient>
+
+    <linearGradient id="cq3-front-grad" x1="15%" y1="0%" x2="85%" y2="100%">
+      <stop offset="0%" stop-color="#FED7AA"/>
+      <stop offset="25%" stop-color="#FDBA74"/>
+      <stop offset="55%" stop-color="#F97316"/>
+      <stop offset="85%" stop-color="#EA580C"/>
+      <stop offset="100%" stop-color="#9A3412"/>
+    </linearGradient>
+
+    <!-- Specular Highlight -->
+    <linearGradient id="cq3-spec" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="50%" stop-color="#FFEDD5" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#F97316" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Spark -->
+    <linearGradient id="cq3-spark-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="40%" stop-color="#FDE047"/>
+      <stop offset="100%" stop-color="#F97316"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dark Tile -->
+  <rect width="512" height="512" rx="118" fill="url(#cq3-bg)"/>
+  <rect x="1.5" y="1.5" width="509" height="509" rx="116.5" fill="none" stroke="url(#cq3-border)" stroke-width="2"/>
+
+  <!-- Tunnel Hole -->
+  <circle cx="240" cy="256" r="92" fill="#04060A" stroke="#1E293B" stroke-width="3"/>
+  <circle cx="240" cy="256" r="80" fill="#020306"/>
+
+  <!-- Rear Cloud Lobe Arc (The cloud's left puff) -->
+  <path d="M 175 320 C 120 280 120 210 160 175 C 185 150 220 155 240 170" 
+        fill="none" stroke="url(#cq3-back-grad)" stroke-width="48" stroke-linecap="round"/>
+
+  <!-- Front 3D Ribbon: Main Cloud Dome -> Right Cloud Lobe -> Bottom Q sweep -> Flare Tail -->
+  <g>
+    <!-- Crisp main ribbon stroke -->
+    <path d="M 220 170 
+             C 235 125, 290 120, 325 155 
+             C 355 140, 395 165, 400 210 
+             C 410 270, 385 330, 335 360 
+             C 275 395, 185 380, 150 320 
+             C 130 280, 140 240, 175 220 
+             C 215 200, 270 215, 305 245 
+             C 345 280, 375 330, 410 365" 
+          fill="none" stroke="url(#cq3-front-grad)" stroke-width="48" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Sharp Specular highlight on cloud dome and Q tail (NO GLOW) -->
+    <path d="M 235 145 C 265 130, 305 132, 325 155 C 345 145, 380 160, 390 195" 
+          fill="none" stroke="url(#cq3-spec)" stroke-width="12" stroke-linecap="round"/>
+    <path d="M 330 275 C 360 315, 385 345, 410 365" 
+          fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" opacity="0.8"/>
+  </g>
+
+  <!-- Crisp Vector Flare Spark (Zero radial bloom/glow) -->
+  <g transform="translate(410, 365)">
+    <path d="M 0 -36 Q 0 0 36 0 Q 0 0 0 36 Q 0 0 -36 0 Q 0 0 0 -36 Z" fill="url(#cq3-spark-grad)"/>
+    <circle cx="0" cy="0" r="7" fill="#FFFFFF"/>
+  </g>
+</svg>

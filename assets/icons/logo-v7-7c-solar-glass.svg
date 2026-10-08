@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="QuickFlare - Solar Glass Q Shifted Left with Visible Cloud">
+  <defs>
+    <!-- Background Tile -->
+    <linearGradient id="v7-7c-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0E1322"/>
+      <stop offset="100%" stop-color="#05070D"/>
+    </linearGradient>
+    <linearGradient id="v7-7c-border" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.02"/>
+    </linearGradient>
+
+    <!-- Cloud Back -->
+    <linearGradient id="v7-7c-cloud-back" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#C2410C"/>
+      <stop offset="50%" stop-color="#EA580C"/>
+      <stop offset="100%" stop-color="#F97316"/>
+    </linearGradient>
+
+    <!-- Cloud Front -->
+    <linearGradient id="v7-7c-cloud-front" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#EA580C"/>
+      <stop offset="50%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#FDBA74"/>
+    </linearGradient>
+
+    <linearGradient id="v7-7c-cloud-spec" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Radiant White-Gold Q Body -->
+    <linearGradient id="v7-7c-q-body" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="35%" stop-color="#FFFBEB"/>
+      <stop offset="75%" stop-color="#FEF08A"/>
+      <stop offset="100%" stop-color="#FDE047"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dark Tile Badge -->
+  <rect width="512" height="512" rx="118" fill="url(#v7-7c-bg)"/>
+  <rect x="1.5" y="1.5" width="509" height="509" rx="116.5" fill="none" stroke="url(#v7-7c-border)" stroke-width="2"/>
+
+  <!-- Complex Cloudflare Cloud (Background) -->
+  <g id="cloud-backdrop-7c">
+    <path d="M 140 315 L 375 315 C 402 315, 424 295, 424 268 C 424 243, 405 222, 380 218 C 375 168, 335 128, 284 128 C 246 128, 212 148, 196 178 C 185 173, 173 170, 160 170 C 128 170, 102 195, 100 226 C 76 232, 58 253, 58 280 C 58 304, 78 315, 102 315 Z" fill="url(#v7-7c-cloud-back)"/>
+    <path d="M 235 315 L 380 315 C 404 315, 424 296, 424 272 C 424 250, 408 232, 386 228 C 380 196, 355 172, 325 172 C 305 172, 288 182, 276 198 C 268 194, 258 192, 248 192 C 224 192, 204 210, 202 234 C 185 240, 172 256, 172 276 C 172 298, 190 315, 212 315 Z" fill="url(#v7-7c-cloud-front)" stroke="#0E1322" stroke-width="3"/>
+    <path d="M 210 175 C 230 144, 260 135, 284 135 C 324 135, 360 162, 372 205" fill="none" stroke="url(#v7-7c-cloud-spec)" stroke-width="5.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Radiant 'Q' Shifted Left (Foreground) -->
+  <g id="solar-q-7c">
+    <!-- Dark Knockout Halo for Graphic Separation -->
+    <circle cx="208" cy="250" r="90" fill="none" stroke="#0E1322" stroke-width="52"/>
+    <path d="M 246 288 L 308 350" stroke="#0E1322" stroke-width="52" stroke-linecap="round"/>
+
+    <!-- Central Tunnel Core -->
+    <circle cx="208" cy="250" r="68" fill="#04060C" stroke="#1E293B" stroke-width="2"/>
+
+    <!-- Main 'Q' Ring -->
+    <circle cx="208" cy="250" r="90" 
+            fill="none" stroke="url(#v7-7c-q-body)" stroke-width="40" stroke-linecap="round"/>
+
+    <!-- Specular Highlight Ridge -->
+    <circle cx="208" cy="250" r="76" 
+            fill="none" stroke="#FFFFFF" stroke-width="4" opacity="0.6"/>
+
+    <!-- Compact Flare Stick / Tail (Smaller, NO STAR, Clean rounded cap) -->
+    <path d="M 246 288 L 308 350" 
+          fill="none" stroke="url(#v7-7c-q-body)" stroke-width="40" stroke-linecap="round"/>
+
+    <!-- Inner Specular on Stick -->
+    <path d="M 250 286 L 302 338" 
+          fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" opacity="0.8"/>
+  </g>
+</svg>

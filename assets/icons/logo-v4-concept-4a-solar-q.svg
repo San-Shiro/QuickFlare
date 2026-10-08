@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="QuickFlare - Solar Q over Cloudflare Cloud">
+  <defs>
+    <!-- Background Tile -->
+    <linearGradient id="v4-c1-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0E1322"/>
+      <stop offset="100%" stop-color="#05070D"/>
+    </linearGradient>
+    <linearGradient id="v4-c1-border" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.02"/>
+    </linearGradient>
+
+    <!-- Solid Cloudflare Cloud Gradient (Signature Sunset) -->
+    <linearGradient id="v4-c1-cloud" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#EA580C"/>
+      <stop offset="40%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#FB923C"/>
+    </linearGradient>
+
+    <!-- Cloud Specular Highlight -->
+    <linearGradient id="v4-c1-cloud-spec" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- The 'Q' Ribbon Gradient (Radiant White-Gold with high contrast) -->
+    <linearGradient id="v4-c1-q-body" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="40%" stop-color="#FFFBEB"/>
+      <stop offset="75%" stop-color="#FEF08A"/>
+      <stop offset="100%" stop-color="#FDE047"/>
+    </linearGradient>
+
+    <!-- Flare Spark Gradient -->
+    <linearGradient id="v4-c1-spark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="50%" stop-color="#FDE047"/>
+      <stop offset="100%" stop-color="#F97316"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dark Tile Badge -->
+  <rect width="512" height="512" rx="118" fill="url(#v4-c1-bg)"/>
+  <rect x="1.5" y="1.5" width="509" height="509" rx="116.5" fill="none" stroke="url(#v4-c1-border)" stroke-width="2"/>
+
+  <!-- ==================== 1. SOLID CLOUDFLARE CLOUD (BACKGROUND) ==================== -->
+  <g id="cloudflare-cloud">
+    <!-- Solid Cloud Silhouette with authentic Cloudflare proportions -->
+    <path d="M 120 340 
+             L 392 340 
+             C 426 340, 452 314, 452 280 
+             C 452 248, 428 222, 396 218 
+             C 390 156, 342 108, 282 108 
+             C 238 108, 200 132, 180 168 
+             C 168 162, 154 158, 140 158 
+             C 102 158, 72 186, 70 224 
+             C 42 230, 20 256, 20 288 
+             C 20 318, 44 340, 74 340 
+             Z" 
+          fill="url(#v4-c1-cloud)"/>
+
+    <!-- Subtle crisp top sheen on cloud dome -->
+    <path d="M 195 160 C 220 128, 255 116, 285 116 C 330 116, 370 148, 385 195" 
+          fill="none" stroke="url(#v4-c1-cloud-spec)" stroke-width="6" stroke-linecap="round"/>
+  </g>
+
+  <!-- ==================== 2. THE 'Q' OVER IT (FOREGROUND) ==================== -->
+  <g id="q-mark">
+    <!-- Dark Knockout Shadow / Backdrop behind Q to give it razor-sharp contrast over the cloud -->
+    <!-- Knockout for the Q Ring -->
+    <circle cx="265" cy="245" r="76" fill="none" stroke="#0E1322" stroke-width="56"/>
+    <!-- Knockout for the Q Tail -->
+    <path d="M 295 275 L 405 385" stroke="#0E1322" stroke-width="58" stroke-linecap="round"/>
+
+    <!-- Inner Core Void of the Q (Plunging into dark tunnel depth) -->
+    <circle cx="265" cy="245" r="50" fill="#04060A" stroke="#1E293B" stroke-width="2"/>
+
+    <!-- The Main 'Q' Ring (Radiant solid white-gold) -->
+    <circle cx="265" cy="245" r="76" 
+            fill="none" stroke="url(#v4-c1-q-body)" stroke-width="38" stroke-linecap="round"/>
+
+    <!-- Inner Specular Edge on Q Ring -->
+    <circle cx="265" cy="245" r="58" 
+            fill="none" stroke="#FFFFFF" stroke-width="4" opacity="0.6"/>
+
+    <!-- The 'Q' Flare Tail (Cutting across and extending past the cloud base) -->
+    <path d="M 300 280 L 400 380" 
+          fill="none" stroke="url(#v4-c1-q-body)" stroke-width="38" stroke-linecap="round"/>
+
+    <!-- 4-Point Solar Flare Star at the tip of the Q -->
+    <g transform="translate(400, 380)">
+      <path d="M 0 -34 Q 0 0 34 0 Q 0 0 0 34 Q 0 0 -34 0 Q 0 0 0 -34 Z" fill="url(#v4-c1-spark)"/>
+      <circle cx="0" cy="0" r="7" fill="#FFFFFF"/>
+    </g>
+  </g>
+</svg>

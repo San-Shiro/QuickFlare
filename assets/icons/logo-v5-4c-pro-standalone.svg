@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="QuickFlare - Balanced Standalone Cloud with 3D Spline Q">
+  <defs>
+    <!-- Cloudflare Cloud Gradient (Vibrant Sunset) -->
+    <linearGradient id="v5-4c-cloud" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#EA580C"/>
+      <stop offset="45%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#FB923C"/>
+    </linearGradient>
+
+    <!-- Cloud Specular Highlight -->
+    <linearGradient id="v5-4c-cloud-spec" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Pure White-Gold 3D Q Ribbon -->
+    <linearGradient id="v5-4c-q-ribbon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="35%" stop-color="#FFFBEB"/>
+      <stop offset="75%" stop-color="#FEF08A"/>
+      <stop offset="100%" stop-color="#FDE047"/>
+    </linearGradient>
+
+    <!-- Flare Spark -->
+    <linearGradient id="v5-4c-spark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="50%" stop-color="#FDE047"/>
+      <stop offset="100%" stop-color="#EA580C"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ==================== 1. OPTICALLY CENTERED CLOUDFLARE CLOUD ==================== -->
+  <!-- Centered horizontally at x = 256, vertically at y = 255 -->
+  <path d="M 138 365 
+           L 410 365 
+           C 442 365, 466 341, 466 309 
+           C 466 279, 444 253, 414 249 
+           C 408 191, 362 145, 304 145 
+           C 260 145, 222 169, 202 203 
+           C 190 197, 176 193, 162 193 
+           C 126 193, 96 221, 94 257 
+           C 66 263, 46 287, 46 319 
+           C 46 347, 68 365, 96 365 
+           Z" 
+        fill="url(#v5-4c-cloud)"/>
+
+  <!-- Cloud Top Specular Sheen -->
+  <path d="M 218 198 C 242 164, 276 153, 304 153 C 350 153, 390 185, 404 232" 
+        fill="none" stroke="url(#v5-4c-cloud-spec)" stroke-width="6.5" stroke-linecap="round"/>
+
+  <!-- ==================== 2. PROPORTIONALLY BALANCED 3D SPLINE 'Q' ==================== -->
+  <g id="standalone-q">
+    <!-- Ambient Occlusion Shadow onto Cloud (Crisp vector shadow) -->
+    <circle cx="246" cy="262" r="58" fill="none" stroke="#7C2D12" stroke-width="40" opacity="0.45"/>
+    <path d="M 275 291 L 370 386" stroke="#7C2D12" stroke-width="40" stroke-linecap="round" opacity="0.45"/>
+
+    <!-- Central Tunnel Core Hole -->
+    <circle cx="246" cy="258" r="41" fill="#0E1322" stroke="#1E293B" stroke-width="2.5"/>
+    <circle cx="246" cy="258" r="32" fill="#04060A"/>
+
+    <!-- Main 'Q' Ring (Radiant 3D Ribbon) -->
+    <circle cx="246" cy="258" r="58" 
+            fill="none" stroke="url(#v5-4c-q-ribbon)" stroke-width="34" stroke-linecap="round"/>
+
+    <!-- Specular Highlight on Q Rim -->
+    <path d="M 195 258 A 58 58 0 0 1 300 230" 
+          fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" opacity="0.9"/>
+
+    <!-- Dynamic Flare Tail Slicing past the Cloud Baseline to (370, 382) -->
+    <path d="M 275 287 L 370 382" 
+          fill="none" stroke="url(#v5-4c-q-ribbon)" stroke-width="34" stroke-linecap="round"/>
+
+    <!-- 4-Point Solar Flare Star -->
+    <g transform="translate(370, 382)">
+      <path d="M 0 -28 Q 0 0 28 0 Q 0 0 0 28 Q 0 0 -28 0 Q 0 0 0 -28 Z" fill="url(#v5-4c-spark)"/>
+      <circle cx="0" cy="0" r="5.5" fill="#FFFFFF"/>
+    </g>
+  </g>
+</svg>

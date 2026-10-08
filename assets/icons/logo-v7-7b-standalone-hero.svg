@@ -28,14 +28,6 @@
       <stop offset="100%" stop-color="#FDE047"/>
     </linearGradient>
   </defs>
-  <g transform="translate(0.00, 0.00) scale(1.0000)">
-
-  <g transform="translate(0.00, 0.00) scale(1.0000)">
-
-  <g transform="translate(0.00, 0.00) scale(1.0000)">
-
-  <g transform="translate(-39.92, -52.15) scale(1.2228)">
-
 
   <!-- ==================== 1. COMPLEX MULTI-LAYER CLOUD (BACKGROUND) ==================== -->
   <g id="standalone-complex-cloud">
@@ -98,13 +90,5 @@
     <!-- Inner Highlight on Stick -->
     <path d="M 250 286 L 302 338" 
           fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round" opacity="0.8"/>
-  </g>
-
-  </g>
-
-  </g>
-
-  </g>
-
   </g>
 </svg>

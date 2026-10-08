@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="QuickFlare - Balanced Solar Glass Q over Cloudflare Cloud">
+  <defs>
+    <!-- Background Tile -->
+    <linearGradient id="v5-4balt-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0E1322"/>
+      <stop offset="100%" stop-color="#05070D"/>
+    </linearGradient>
+    <linearGradient id="v5-4balt-border" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.02"/>
+    </linearGradient>
+
+    <!-- Cloudflare Cloud Gradient -->
+    <linearGradient id="v5-4balt-cloud" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#EA580C"/>
+      <stop offset="45%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#FB923C"/>
+    </linearGradient>
+    <linearGradient id="v5-4balt-cloud-spec" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Radiant White-Gold 'Q' Body Gradient -->
+    <linearGradient id="v5-4balt-q-body" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="35%" stop-color="#FFFBEB"/>
+      <stop offset="75%" stop-color="#FEF08A"/>
+      <stop offset="100%" stop-color="#FDE047"/>
+    </linearGradient>
+
+    <!-- Flare Spark Gradient -->
+    <linearGradient id="v5-4balt-spark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="50%" stop-color="#FDE047"/>
+      <stop offset="100%" stop-color="#F97316"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dark Tile Badge -->
+  <rect width="512" height="512" rx="118" fill="url(#v5-4balt-bg)"/>
+  <rect x="1.5" y="1.5" width="509" height="509" rx="116.5" fill="none" stroke="url(#v5-4balt-border)" stroke-width="2"/>
+
+  <!-- ==================== 1. OPTICALLY BALANCED CLOUDFLARE CLOUD ==================== -->
+  <path d="M 138 345 
+           L 410 345 
+           C 442 345, 466 321, 466 289 
+           C 466 259, 444 233, 414 229 
+           C 408 171, 362 125, 304 125 
+           C 260 125, 222 149, 202 183 
+           C 190 177, 176 173, 162 173 
+           C 126 173, 96 201, 94 237 
+           C 66 243, 46 267, 46 299 
+           C 46 327, 68 345, 96 345 
+           Z" 
+        fill="url(#v5-4balt-cloud)"/>
+
+  <!-- Cloud Dome Specular Highlight -->
+  <path d="M 218 178 C 242 144, 276 133, 304 133 C 350 133, 390 165, 404 212" 
+        fill="none" stroke="url(#v5-4balt-cloud-spec)" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- ==================== 2. BALANCED SOLAR GLASS 'Q' ==================== -->
+  <g id="solarglass-q">
+    <!-- Dark Knockout Halo for crisp graphic definition -->
+    <circle cx="246" cy="238" r="56" fill="none" stroke="#0E1322" stroke-width="48"/>
+    <path d="M 275 267 L 370 362" stroke="#0E1322" stroke-width="48" stroke-linecap="round"/>
+
+    <!-- Central Tunnel Depth Core -->
+    <circle cx="246" cy="238" r="39" fill="#04060A" stroke="#1E293B" stroke-width="2"/>
+
+    <!-- Main 'Q' Ring -->
+    <circle cx="246" cy="238" r="56" 
+            fill="none" stroke="url(#v5-4balt-q-body)" stroke-width="34" stroke-linecap="round"/>
+
+    <!-- Inner Specular Ridge -->
+    <circle cx="246" cy="238" r="44" 
+            fill="none" stroke="#FFFFFF" stroke-width="3.5" opacity="0.65"/>
+
+    <!-- Flare Tail Slicing past the Cloud Baseline to (370, 362) -->
+    <path d="M 275 267 L 370 362" 
+          fill="none" stroke="url(#v5-4balt-q-body)" stroke-width="34" stroke-linecap="round"/>
+
+    <!-- 4-Point Solar Flare Star -->
+    <g transform="translate(370, 362)">
+      <path d="M 0 -28 Q 0 0 28 0 Q 0 0 0 28 Q 0 0 -28 0 Q 0 0 0 -28 Z" fill="url(#v5-4balt-spark)"/>
+      <circle cx="0" cy="0" r="5.5" fill="#FFFFFF"/>
+    </g>
+  </g>
+</svg>

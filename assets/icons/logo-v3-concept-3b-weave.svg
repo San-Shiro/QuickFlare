@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="QuickFlare - 3D Weave Cloud-Q">
+  <defs>
+    <!-- Background -->
+    <linearGradient id="v3-c3b-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0E1322"/>
+      <stop offset="100%" stop-color="#05070D"/>
+    </linearGradient>
+    <linearGradient id="v3-c3b-border" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.02"/>
+    </linearGradient>
+
+    <!-- Ring Back Gradient (deeper shadow) -->
+    <linearGradient id="v3-c3b-ring-back" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7C2D12"/>
+      <stop offset="60%" stop-color="#9A3412"/>
+      <stop offset="100%" stop-color="#C2410C"/>
+    </linearGradient>
+
+    <!-- Cloud Wing Gradient -->
+    <linearGradient id="v3-c3b-cloud" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#EA580C"/>
+      <stop offset="45%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#FDBA74"/>
+    </linearGradient>
+
+    <!-- Front Q Ring & Flare Gradient -->
+    <linearGradient id="v3-c3b-ring-front" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FED7AA"/>
+      <stop offset="30%" stop-color="#F97316"/>
+      <stop offset="70%" stop-color="#EA580C"/>
+      <stop offset="100%" stop-color="#C2410C"/>
+    </linearGradient>
+
+    <linearGradient id="v3-c3b-flare" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="35%" stop-color="#FDE047"/>
+      <stop offset="75%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#EA580C"/>
+    </linearGradient>
+
+    <linearGradient id="v3-c3b-spec" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dark Tile -->
+  <rect width="512" height="512" rx="118" fill="url(#v3-c3b-bg)"/>
+  <rect x="1.5" y="1.5" width="509" height="509" rx="116.5" fill="none" stroke="url(#v3-c3b-border)" stroke-width="2"/>
+
+  <!-- Tunnel Core -->
+  <circle cx="285" cy="275" r="75" fill="#04060A" stroke="#1E293B" stroke-width="3"/>
+  <circle cx="285" cy="275" r="62" fill="#020306"/>
+
+  <!-- 1. Rear Segment of the Q Ring (Passes under the cloud) -->
+  <path d="M 210 275 A 75 75 0 0 1 350 240" 
+        fill="none" stroke="url(#v3-c3b-ring-back)" stroke-width="44" stroke-linecap="round"/>
+
+  <!-- 2. Clean Ambient Occlusion Shadow for Weave (Crisp vector, no blur) -->
+  <path d="M 195 340 L 145 340 A 55 55 0 0 1 105 245 A 75 75 0 0 1 230 180 A 85 85 0 0 1 310 200" 
+        fill="none" stroke="#04060A" stroke-width="54" stroke-linecap="round"/>
+
+  <!-- 3. Cloud Wing (Weaving over the rear ring) -->
+  <path d="M 195 340 
+           L 145 340 
+           A 55 55 0 0 1 105 245 
+           A 75 75 0 0 1 230 180 
+           A 85 85 0 0 1 310 200" 
+        fill="none" stroke="url(#v3-c3b-cloud)" stroke-width="44" stroke-linecap="round"/>
+
+  <!-- Specular Streak on Cloud Top -->
+  <path d="M 140 235 A 75 75 0 0 1 230 185 A 85 85 0 0 1 295 200" 
+        fill="none" stroke="url(#v3-c3b-spec)" stroke-width="8" stroke-linecap="round"/>
+
+  <!-- 4. Front Segment of the Q Ring (Looping over and completing the circle) -->
+  <path d="M 285 200 A 75 75 0 0 1 360 275 A 75 75 0 0 1 300 345" 
+        fill="none" stroke="url(#v3-c3b-ring-front)" stroke-width="44" stroke-linecap="round"/>
+
+  <!-- 5. Negative Space Knockout for the Q Tail -->
+  <path d="M 330 320 L 415 405" stroke="#0E1322" stroke-width="56" stroke-linecap="round"/>
+
+  <!-- 6. Dynamic Flare Arrow (Q Tail) -->
+  <path d="M 315 305 L 410 400" 
+        fill="none" stroke="url(#v3-c3b-flare)" stroke-width="44" stroke-linecap="round"/>
+
+  <!-- Flare Star -->
+  <g transform="translate(410, 400)">
+    <path d="M 0 -32 Q 0 0 32 0 Q 0 0 0 32 Q 0 0 -32 0 Q 0 0 0 -32 Z" fill="#FFFFFF"/>
+    <circle cx="0" cy="0" r="6" fill="#FDE047"/>
+  </g>
+</svg>

@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="QuickFlare - Kinetic Aperture">
+  <defs>
+    <linearGradient id="c2-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0E131F"/>
+      <stop offset="100%" stop-color="#05070B"/>
+    </linearGradient>
+    <linearGradient id="c2-rim" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.02"/>
+    </linearGradient>
+    <linearGradient id="c2-flare-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF5100"/>
+      <stop offset="45%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#FBBF24"/>
+    </linearGradient>
+    <radialGradient id="c2-bloom" cx="72%" cy="50%" r="45%">
+      <stop offset="0%" stop-color="#F97316" stop-opacity="0.45"/>
+      <stop offset="60%" stop-color="#EA580C" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="c2-spark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFBEB"/>
+      <stop offset="50%" stop-color="#FED7AA"/>
+      <stop offset="100%" stop-color="#FB923C"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="118" fill="url(#c2-bg)"/>
+  <rect x="1.5" y="1.5" width="509" height="509" rx="116.5" fill="none" stroke="url(#c2-rim)" stroke-width="2"/>
+  <circle cx="365" cy="256" r="140" fill="url(#c2-bloom)"/>
+
+  <!-- Tunnel Chevrons with Forced Perspective -->
+  <g fill="none" stroke="url(#c2-flare-grad)" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 85 180 L 155 256 L 85 332" stroke-width="40" opacity="0.32"/>
+    <path d="M 165 174 L 245 256 L 165 338" stroke-width="44" opacity="0.68"/>
+    <path d="M 245 168 L 335 256 L 245 344" stroke-width="48" opacity="1.0"/>
+  </g>
+
+  <!-- 4-Point Solar Flare -->
+  <g transform="translate(395, 256)">
+    <path d="M 0 -85 Q 0 0 85 0 Q 0 0 0 85 Q 0 0 -85 0 Q 0 0 0 -85 Z" fill="#F97316" opacity="0.25"/>
+    <path d="M 0 -60 Q 0 0 60 0 Q 0 0 0 60 Q 0 0 -60 0 Q 0 0 0 -60 Z" fill="url(#c2-spark)"/>
+    <circle cx="0" cy="0" r="11" fill="#FFFFFF"/>
+  </g>
+</svg>

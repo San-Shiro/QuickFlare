@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="QuickFlare - Supersonic Cloud-Q">
+  <defs>
+    <!-- Background -->
+    <linearGradient id="v2-c4-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0E1322"/>
+      <stop offset="100%" stop-color="#05070D"/>
+    </linearGradient>
+    <linearGradient id="v2-c4-border" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.02"/>
+    </linearGradient>
+
+    <!-- Cloud Back Body -->
+    <linearGradient id="v2-c4-cloud" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#C2410C"/>
+      <stop offset="40%" stop-color="#EA580C"/>
+      <stop offset="100%" stop-color="#F97316"/>
+    </linearGradient>
+
+    <!-- Supersonic Flare Bolt -->
+    <linearGradient id="v2-c4-bolt" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="30%" stop-color="#FDE047"/>
+      <stop offset="70%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#EA580C"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dark Tile -->
+  <rect width="512" height="512" rx="118" fill="url(#v2-c4-bg)"/>
+  <rect x="1.5" y="1.5" width="509" height="509" rx="116.5" fill="none" stroke="url(#v2-c4-border)" stroke-width="2"/>
+
+  <!-- Left Upper Cloud Dome -->
+  <path d="M 125 320 
+           A 65 65 0 0 1 120 230 
+           A 85 85 0 0 1 245 170 
+           A 80 80 0 0 1 345 205 
+           A 65 65 0 0 1 395 275" 
+        fill="none" stroke="url(#v2-c4-cloud)" stroke-width="48" stroke-linecap="round"/>
+
+  <!-- Lower Base Arc completing the 'Q' body -->
+  <path d="M 140 330 
+           L 290 330 
+           A 75 75 0 0 0 365 255" 
+        fill="none" stroke="url(#v2-c4-cloud)" stroke-width="48" stroke-linecap="round"/>
+
+  <!-- The Supersonic Flare / Reverse Proxy Conduit (forming the dynamic Q) -->
+  <g>
+    <!-- Dark knockout gutter -->
+    <path d="M 230 210 L 415 395" stroke="#0E1322" stroke-width="64" stroke-linecap="round"/>
+    
+    <!-- Radiant supersonic flare bolt -->
+    <path d="M 240 220 L 405 385" 
+          fill="none" stroke="url(#v2-c4-bolt)" stroke-width="44" stroke-linecap="round"/>
+    
+    <!-- 4-point flare star at the exit -->
+    <g transform="translate(405, 385)">
+      <path d="M 0 -34 Q 0 0 34 0 Q 0 0 0 34 Q 0 0 -34 0 Q 0 0 0 -34 Z" fill="#FFFFFF"/>
+      <circle cx="0" cy="0" r="6" fill="#FDE047"/>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="QuickFlare - 3D Spline Portal">
+  <defs>
+    <linearGradient id="c1-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="50%" stop-color="#0A0E17"/>
+      <stop offset="100%" stop-color="#030712"/>
+    </linearGradient>
+    <radialGradient id="c1-ambient" cx="45%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#F97316" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="c1-tube-back" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#9A3412"/>
+      <stop offset="60%" stop-color="#C2410C"/>
+      <stop offset="100%" stop-color="#EA580C"/>
+    </linearGradient>
+    <linearGradient id="c1-tube-front" x1="10%" y1="0%" x2="90%" y2="100%">
+      <stop offset="0%" stop-color="#FDBA74"/>
+      <stop offset="30%" stop-color="#FB923C"/>
+      <stop offset="65%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#C2410C"/>
+    </linearGradient>
+    <linearGradient id="c1-specular" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9"/>
+      <stop offset="40%" stop-color="#FED7AA" stop-opacity="0.6"/>
+      <stop offset="80%" stop-color="#F97316" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="c1-flare-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFBEB" stop-opacity="1"/>
+      <stop offset="25%" stop-color="#FBBF24" stop-opacity="0.8"/>
+      <stop offset="60%" stop-color="#F97316" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#EA580C" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="c1-spark-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFBEB"/>
+      <stop offset="50%" stop-color="#FDE047"/>
+      <stop offset="100%" stop-color="#F97316"/>
+    </linearGradient>
+    <filter id="c1-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="16" flood-color="#000000" flood-opacity="0.6"/>
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#C2410C" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="118" fill="url(#c1-bg)"/>
+  <rect width="512" height="512" rx="118" fill="url(#c1-ambient)"/>
+  <rect x="1.5" y="1.5" width="509" height="509" rx="116.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
+
+  <!-- Tunnel Aperture Core -->
+  <circle cx="230" cy="256" r="95" fill="#070B14" stroke="#1E293B" stroke-width="4"/>
+  <circle cx="230" cy="256" r="85" fill="#030712"/>
+
+  <!-- Back Ribbon Arc -->
+  <path d="M 170 340 C 110 290 110 190 180 145 C 235 110 310 120 355 165" 
+        fill="none" stroke="url(#c1-tube-back)" stroke-width="52" stroke-linecap="round"/>
+
+  <!-- Front 3D Ribbon Loop -->
+  <g filter="url(#c1-shadow)">
+    <path d="M 355 165 C 400 210 405 295 345 350 C 285 405 185 390 145 330 C 130 305 125 270 140 240 C 160 200 215 190 260 215 C 310 245 350 310 395 365" 
+          fill="none" stroke="url(#c1-tube-front)" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 350 175 C 385 215 390 280 345 325 C 305 365 220 365 175 325" 
+          fill="none" stroke="url(#c1-specular)" stroke-width="14" stroke-linecap="round" opacity="0.85"/>
+  </g>
+
+  <!-- Emerging Kinetic Flare -->
+  <g transform="translate(395, 365)">
+    <circle cx="0" cy="0" r="70" fill="url(#c1-flare-glow)"/>
+    <path d="M 0 -36 Q 0 0 36 0 Q 0 0 0 36 Q 0 0 -36 0 Q 0 0 0 -36 Z" fill="url(#c1-spark-grad)"/>
+    <circle cx="0" cy="0" r="7" fill="#FFFFFF"/>
+  </g>
+</svg>

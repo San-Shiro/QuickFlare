@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="QuickFlare - Orbital Flame">
+  <defs>
+    <linearGradient id="c3-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0F1420"/>
+      <stop offset="100%" stop-color="#06080E"/>
+    </linearGradient>
+    <linearGradient id="c3-rim" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.02"/>
+    </linearGradient>
+    <linearGradient id="c3-ring-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#C2410C"/>
+      <stop offset="50%" stop-color="#EA580C"/>
+      <stop offset="100%" stop-color="#F97316"/>
+    </linearGradient>
+    <linearGradient id="c3-flame-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFBEB"/>
+      <stop offset="25%" stop-color="#FDE047"/>
+      <stop offset="60%" stop-color="#FB923C"/>
+      <stop offset="100%" stop-color="#EA580C"/>
+    </linearGradient>
+    <radialGradient id="c3-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#F97316" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="118" fill="url(#c3-bg)"/>
+  <rect x="1.5" y="1.5" width="509" height="509" rx="116.5" fill="none" stroke="url(#c3-rim)" stroke-width="2"/>
+  <circle cx="256" cy="240" r="130" fill="url(#c3-glow)"/>
+
+  <!-- Outer Ring (Portal Entrance) -->
+  <path d="M 256 100 A 140 140 0 1 0 396 240" 
+        fill="none" stroke="url(#c3-ring-grad)" stroke-width="48" stroke-linecap="round"/>
+
+  <!-- Inner Speed Curve & Q Tail (Reverse Proxy Conduit) -->
+  <path d="M 256 160 A 80 80 0 0 1 336 240 C 336 280 300 320 260 320 C 220 320 180 270 210 220 C 240 170 340 180 370 240 C 390 280 380 330 420 370" 
+        fill="none" stroke="url(#c3-flame-grad)" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="420" cy="370" r="16" fill="#FFFBEB"/>
+</svg>

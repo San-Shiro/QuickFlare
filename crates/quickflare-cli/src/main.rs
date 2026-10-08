@@ -6,7 +6,7 @@ use quickflare_core::ipc::{IpcClient, IpcRequest, IpcResponse};
 use quickflare_core::models::{IngressRule, StoredRoute};
 
 #[derive(Parser, Debug)]
-#[command(name = "quickflare", version = "0.4.8", about = "Publish localhost to the internet through Cloudflare Tunnel")]
+#[command(name = "quickflare", version = "0.4.9", about = "Publish localhost to the internet through Cloudflare Tunnel")]
 struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
@@ -124,7 +124,7 @@ async fn cmd_login(token_opt: Option<String>) -> Result<()> {
 
 async fn cmd_status() -> Result<()> {
     let cfg = Config::load().unwrap_or_default();
-    println!("QuickFlare v0.4.8");
+    println!("QuickFlare v0.4.9");
     println!("===============================");
 
     if cfg.api_token.is_empty() {

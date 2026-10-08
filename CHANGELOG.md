@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.4.9 - 2026-10-08
+
+- **Refreshed Visual Identity & Branding**: Launched modern continuous 3D spline 'Q' logo with authentic Cloudflare sunset cloud and specular highlights.
+- **High-Resolution Vector & System Assets**: Rebuilt application icons, system tray icon with disabled states, transparent README badges, and Windows PE executable resources (`.syso`).
+- **Cloudflare Session Resilience**: Added zone-level fallback discovery when scoped API tokens lack direct account listing permissions.
+
 ## v0.4.8 - 2026-10-07
 
 - Protected tunnel ingress configuration updates with a mutex to prevent concurrent route clobbering.

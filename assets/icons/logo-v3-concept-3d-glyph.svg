@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="QuickFlare - Minimalist Tray Glyph">
+  <defs>
+    <!-- Background -->
+    <linearGradient id="v3-c3d-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0E1322"/>
+      <stop offset="100%" stop-color="#05070D"/>
+    </linearGradient>
+    <linearGradient id="v3-c3d-border" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.02"/>
+    </linearGradient>
+
+    <!-- Vibrant Pure Flame -->
+    <linearGradient id="v3-c3d-flame" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF6A00"/>
+      <stop offset="100%" stop-color="#FBAD41"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dark Tile -->
+  <rect width="512" height="512" rx="118" fill="url(#v3-c3d-bg)"/>
+  <rect x="1.5" y="1.5" width="509" height="509" rx="116.5" fill="none" stroke="url(#v3-c3d-border)" stroke-width="2"/>
+
+  <!-- Left Cloud Wing -->
+  <path d="M 195 340 
+           L 145 340 
+           A 55 55 0 0 1 105 245 
+           A 75 75 0 0 1 230 180 
+           A 85 85 0 0 1 310 200" 
+        fill="none" stroke="url(#v3-c3d-flame)" stroke-width="48" stroke-linecap="round"/>
+
+  <!-- 'Q' Tunnel Ring -->
+  <circle cx="285" cy="275" r="75" 
+          fill="none" stroke="url(#v3-c3d-flame)" stroke-width="48" stroke-linecap="round"/>
+
+  <!-- Negative Space Knockout Gutter -->
+  <path d="M 330 320 L 415 405" stroke="#0E1322" stroke-width="60" stroke-linecap="round"/>
+
+  <!-- Kinetic Flare Arrow (Q Tail) -->
+  <path d="M 315 305 L 410 400" 
+        fill="none" stroke="#FFFFFF" stroke-width="48" stroke-linecap="round"/>
+
+  <!-- 4-Point Star -->
+  <g transform="translate(410, 400)">
+    <path d="M 0 -32 Q 0 0 32 0 Q 0 0 0 32 Q 0 0 -32 0 Q 0 0 0 -32 Z" fill="#FFE082"/>
+  </g>
+</svg>

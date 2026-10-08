@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="QuickFlare - Supersonic Tunnel Cloud-Q">
+  <defs>
+    <!-- Background -->
+    <linearGradient id="v3-c3c-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0E1322"/>
+      <stop offset="100%" stop-color="#05070D"/>
+    </linearGradient>
+    <linearGradient id="v3-c3c-border" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.02"/>
+    </linearGradient>
+
+    <!-- Cloud Wing Gradient -->
+    <linearGradient id="v3-c3c-cloud" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#EA580C"/>
+      <stop offset="50%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#FDBA74"/>
+    </linearGradient>
+
+    <!-- Q Ring Gradient -->
+    <linearGradient id="v3-c3c-ring" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDBA74"/>
+      <stop offset="35%" stop-color="#F97316"/>
+      <stop offset="75%" stop-color="#EA580C"/>
+      <stop offset="100%" stop-color="#C2410C"/>
+    </linearGradient>
+
+    <!-- Flare Gradient -->
+    <linearGradient id="v3-c3c-flare" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="35%" stop-color="#FDE047"/>
+      <stop offset="75%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#EA580C"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dark Tile -->
+  <rect width="512" height="512" rx="118" fill="url(#v3-c3c-bg)"/>
+  <rect x="1.5" y="1.5" width="509" height="509" rx="116.5" fill="none" stroke="url(#v3-c3c-border)" stroke-width="2"/>
+
+  <!-- Left Cloud Wing -->
+  <path d="M 195 340 
+           L 145 340 
+           A 55 55 0 0 1 105 245 
+           A 75 75 0 0 1 230 180 
+           A 85 85 0 0 1 310 200" 
+        fill="none" stroke="url(#v3-c3c-cloud)" stroke-width="44" stroke-linecap="round"/>
+
+  <!-- Concentric Perspective Tunnel Steps (Inside the Q Aperture) -->
+  <circle cx="285" cy="275" r="75" fill="#04060A"/>
+  <!-- Tunnel Step 1 -->
+  <circle cx="285" cy="275" r="56" fill="none" stroke="#EA580C" stroke-width="8" opacity="0.35"/>
+  <!-- Tunnel Step 2 -->
+  <circle cx="285" cy="275" r="38" fill="none" stroke="#F97316" stroke-width="6" opacity="0.6"/>
+  <!-- Deep Tunnel Center Core -->
+  <circle cx="285" cy="275" r="22" fill="#020306" stroke="#FDE047" stroke-width="4"/>
+
+  <!-- Circular 'Q' Aperture Ring -->
+  <circle cx="285" cy="275" r="75" 
+          fill="none" stroke="url(#v3-c3c-ring)" stroke-width="44" stroke-linecap="round"/>
+
+  <!-- Horizontal Acceleration Streaks on Cloud Wing -->
+  <path d="M 70 305 L 140 305" stroke="#F97316" stroke-width="6" stroke-linecap="round" opacity="0.5"/>
+  <path d="M 85 325 L 135 325" stroke="#EA580C" stroke-width="6" stroke-linecap="round" opacity="0.4"/>
+
+  <!-- Negative Space Knockout Gutter -->
+  <path d="M 330 320 L 415 405" stroke="#0E1322" stroke-width="56" stroke-linecap="round"/>
+
+  <!-- Kinetic Flare Arrow (Q Tail) -->
+  <path d="M 315 305 L 410 400" 
+        fill="none" stroke="url(#v3-c3c-flare)" stroke-width="44" stroke-linecap="round"/>
+
+  <!-- Flare Star -->
+  <g transform="translate(410, 400)">
+    <path d="M 0 -32 Q 0 0 32 0 Q 0 0 0 32 Q 0 0 -32 0 Q 0 0 0 -32 Z" fill="#FFFFFF"/>
+    <circle cx="0" cy="0" r="6" fill="#FDE047"/>
+  </g>
+</svg>

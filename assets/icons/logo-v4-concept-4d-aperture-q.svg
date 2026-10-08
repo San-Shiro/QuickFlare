@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="QuickFlare - Tunnel Aperture Q over Cloudflare Cloud">
+  <defs>
+    <!-- Background Tile -->
+    <linearGradient id="v4-c4-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0E1322"/>
+      <stop offset="100%" stop-color="#05070D"/>
+    </linearGradient>
+    <linearGradient id="v4-c4-border" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.02"/>
+    </linearGradient>
+
+    <!-- Cloudflare Cloud Gradient -->
+    <linearGradient id="v4-c4-cloud" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#EA580C"/>
+      <stop offset="40%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#FB923C"/>
+    </linearGradient>
+
+    <!-- Laser Beam Q Tail -->
+    <linearGradient id="v4-c4-beam" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="35%" stop-color="#FDE047"/>
+      <stop offset="75%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#EA580C"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dark Tile Badge -->
+  <rect width="512" height="512" rx="118" fill="url(#v4-c4-bg)"/>
+  <rect x="1.5" y="1.5" width="509" height="509" rx="116.5" fill="none" stroke="url(#v4-c4-border)" stroke-width="2"/>
+
+  <!-- ==================== 1. SOLID CLOUDFLARE CLOUD ==================== -->
+  <path d="M 120 340 
+           L 392 340 
+           C 426 340, 452 314, 452 280 
+           C 452 248, 428 222, 396 218 
+           C 390 156, 342 108, 282 108 
+           C 238 108, 200 132, 180 168 
+           C 168 162, 154 158, 140 158 
+           C 102 158, 72 186, 70 224 
+           C 42 230, 20 256, 20 288 
+           C 20 318, 44 340, 74 340 
+           Z" 
+        fill="url(#v4-c4-cloud)"/>
+
+  <!-- ==================== 2. TUNNEL APERTURE & Q TAIL ==================== -->
+  <!-- Circular Tunnel Void carved into Cloud -->
+  <circle cx="260" cy="245" r="62" fill="#04060A" stroke="#0E1322" stroke-width="8"/>
+  <circle cx="260" cy="245" r="48" fill="#020306"/>
+
+  <!-- Negative Space Knockout Gutter for the Q Tail -->
+  <path d="M 290 275 L 415 400" stroke="#0E1322" stroke-width="58" stroke-linecap="round"/>
+
+  <!-- Supersonic Laser Beam slicing out through Cloud to complete the 'Q' -->
+  <path d="M 280 265 L 405 390" 
+        fill="none" stroke="url(#v4-c4-beam)" stroke-width="44" stroke-linecap="round"/>
+
+  <!-- 4-Point Solar Flare Star -->
+  <g transform="translate(405, 390)">
+    <path d="M 0 -32 Q 0 0 32 0 Q 0 0 0 32 Q 0 0 -32 0 Q 0 0 0 -32 Z" fill="#FFFFFF"/>
+    <circle cx="0" cy="0" r="6" fill="#FDE047"/>
+  </g>
+</svg>

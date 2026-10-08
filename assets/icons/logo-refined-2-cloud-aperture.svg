@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="QuickFlare - Cloud Portal Q">
+  <defs>
+    <!-- Dark Badge -->
+    <linearGradient id="cq2-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0E1322"/>
+      <stop offset="100%" stop-color="#060911"/>
+    </linearGradient>
+    <linearGradient id="cq2-border" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.02"/>
+    </linearGradient>
+
+    <!-- Cloud Body Gradient (Vibrant modern sunset) -->
+    <linearGradient id="cq2-cloud-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDBA74"/>
+      <stop offset="30%" stop-color="#FB923C"/>
+      <stop offset="70%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#C2410C"/>
+    </linearGradient>
+
+    <!-- Specular Rim Gradient -->
+    <linearGradient id="cq2-specular" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9"/>
+      <stop offset="50%" stop-color="#FED7AA" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#F97316" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Flare Tail Gradient -->
+    <linearGradient id="cq2-tail-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="30%" stop-color="#FDE047"/>
+      <stop offset="75%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#EA580C"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Tile -->
+  <rect width="512" height="512" rx="118" fill="url(#cq2-bg)"/>
+  <rect x="1.5" y="1.5" width="509" height="509" rx="116.5" fill="none" stroke="url(#cq2-border)" stroke-width="2"/>
+
+  <!-- Tunnel Aperture (Depressed central core) -->
+  <ellipse cx="245" cy="270" rx="68" ry="68" fill="#04060A" stroke="#1E293B" stroke-width="4"/>
+  <ellipse cx="245" cy="270" rx="55" ry="55" fill="#020306"/>
+
+  <!-- Main Cloud Form which also defines the 'Q' Loop -->
+  <!-- Starts at base, arcs through 3 cloud puffs, loops around tunnel -->
+  <path d="M 125 330 
+           C 95 330, 85 270, 125 240 
+           C 115 195, 165 160, 205 180 
+           C 230 135, 305 130, 335 175 
+           C 385 175, 415 220, 400 270 
+           C 415 320, 375 365, 315 365 
+           C 255 365, 230 365, 125 330 Z" 
+        fill="url(#cq2-cloud-grad)" />
+
+  <!-- Cutout Tunnel Hole in Cloud to create donut / 'Q' cavity -->
+  <circle cx="245" cy="265" r="52" fill="#04060A"/>
+
+  <!-- Specular Sheen line along cloud top (Zero glow) -->
+  <path d="M 135 240 
+           C 130 205, 165 180, 200 190 
+           M 215 165 
+           C 240 140, 295 138, 325 170 
+           M 345 185 
+           C 380 195, 395 230, 390 265" 
+        fill="none" stroke="url(#cq2-specular)" stroke-width="7" stroke-linecap="round"/>
+
+  <!-- Dynamic 'Q' Tail Piercing through from tunnel out past the cloud base -->
+  <g>
+    <!-- Fast-forward speed stroke forming Q leg -->
+    <path d="M 235 265 C 275 275, 330 310, 405 385" 
+          fill="none" stroke="url(#cq2-tail-grad)" stroke-width="42" stroke-linecap="round"/>
+    
+    <!-- 4-point flare spark at the end of the tail -->
+    <g transform="translate(405, 385)">
+      <path d="M 0 -34 Q 0 0 34 0 Q 0 0 0 34 Q 0 0 -34 0 Q 0 0 0 -34 Z" fill="#FFFFFF"/>
+      <circle cx="0" cy="0" r="6" fill="#FBBF24"/>
+    </g>
+  </g>
+</svg>

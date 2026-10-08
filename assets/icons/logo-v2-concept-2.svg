@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="QuickFlare - Spline 3D Cloud-Torus">
+  <defs>
+    <!-- Background -->
+    <linearGradient id="v2-c2-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0E1322"/>
+      <stop offset="100%" stop-color="#05070D"/>
+    </linearGradient>
+    <linearGradient id="v2-c2-border" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.02"/>
+    </linearGradient>
+
+    <!-- 3D Ribbon: Back Layer (Warm deep amber) -->
+    <linearGradient id="v2-c2-ribbon-back" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7C2D12"/>
+      <stop offset="60%" stop-color="#9A3412"/>
+      <stop offset="100%" stop-color="#C2410C"/>
+    </linearGradient>
+
+    <!-- 3D Ribbon: Front Layer (Electric solar flame) -->
+    <linearGradient id="v2-c2-ribbon-front" x1="10%" y1="0%" x2="90%" y2="100%">
+      <stop offset="0%" stop-color="#FED7AA"/>
+      <stop offset="25%" stop-color="#FDBA74"/>
+      <stop offset="60%" stop-color="#F97316"/>
+      <stop offset="85%" stop-color="#EA580C"/>
+      <stop offset="100%" stop-color="#C2410C"/>
+    </linearGradient>
+
+    <!-- Specular Highlight (Pure vector glass reflection) -->
+    <linearGradient id="v2-c2-specular" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="40%" stop-color="#FED7AA" stop-opacity="0.6"/>
+      <stop offset="80%" stop-color="#F97316" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Flare Spark -->
+    <linearGradient id="v2-c2-spark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="40%" stop-color="#FDE047"/>
+      <stop offset="100%" stop-color="#F97316"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dark Tile -->
+  <rect width="512" height="512" rx="118" fill="url(#v2-c2-bg)"/>
+  <rect x="1.5" y="1.5" width="509" height="509" rx="116.5" fill="none" stroke="url(#v2-c2-border)" stroke-width="2"/>
+
+  <!-- Tunnel Core (Crisp dark depth) -->
+  <circle cx="230" cy="265" r="92" fill="#04060A" stroke="#1E293B" stroke-width="4"/>
+  <circle cx="230" cy="265" r="78" fill="#020306"/>
+
+  <!-- Segment 1: Back Under-Loop (Passing through the tunnel) -->
+  <path d="M 165 335 C 115 285 110 205 160 160 C 205 120 280 125 330 165" 
+        fill="none" stroke="url(#v2-c2-ribbon-back)" stroke-width="48" stroke-linecap="round"/>
+
+  <!-- Segment 2: Crisp Ambient Occlusion Shadow Under Overlap (Pure vector, no blur) -->
+  <path d="M 330 165 C 365 195 385 245 375 295 C 365 345 320 380 255 380 C 185 380 145 335 155 275 C 165 215 230 205 270 230 C 315 260 350 315 405 370" 
+        fill="none" stroke="#04060A" stroke-width="58" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Segment 3: Front Over-Loop (Spline Cloud Crest + Q Tail) -->
+  <!-- Creates two distinct cloud crests along top-right before plunging and exiting as Q -->
+  <path d="M 325 160 
+           C 365 195, 385 245, 375 295 
+           C 365 345, 320 380, 255 380 
+           C 185 380, 145 335, 155 275 
+           C 165 215, 230 205, 270 230 
+           C 315 260, 350 315, 405 370" 
+        fill="none" stroke="url(#v2-c2-ribbon-front)" stroke-width="48" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Segment 4: Specular Reflection Streak (Follows curvature with glass precision) -->
+  <path d="M 320 170 
+           C 355 205, 365 250, 355 290 
+           C 345 330, 305 355, 255 355 
+           C 200 355, 170 325, 175 280" 
+        fill="none" stroke="url(#v2-c2-specular)" stroke-width="12" stroke-linecap="round"/>
+
+  <!-- Second Specular along the Q Tail -->
+  <path d="M 335 285 C 365 325, 385 350, 405 370" 
+        fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" opacity="0.8"/>
+
+  <!-- 4-Point Flare Star at the Q Exit -->
+  <g transform="translate(405, 370)">
+    <path d="M 0 -34 Q 0 0 34 0 Q 0 0 0 34 Q 0 0 -34 0 Q 0 0 0 -34 Z" fill="url(#v2-c2-spark)"/>
+    <circle cx="0" cy="0" r="6" fill="#FFFFFF"/>
+  </g>
+</svg>

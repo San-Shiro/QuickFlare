@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="QuickFlare - Balanced Obsidian Q over Cloudflare Cloud">
+  <defs>
+    <!-- Background Tile -->
+    <linearGradient id="v5-4b-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0E1322"/>
+      <stop offset="100%" stop-color="#05070D"/>
+    </linearGradient>
+    <linearGradient id="v5-4b-border" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.02"/>
+    </linearGradient>
+
+    <!-- Cloudflare Cloud Gradient (Signature Sunset, horizontally balanced) -->
+    <linearGradient id="v5-4b-cloud" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#C2410C"/>
+      <stop offset="35%" stop-color="#EA580C"/>
+      <stop offset="75%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#FDBA74"/>
+    </linearGradient>
+    <linearGradient id="v5-4b-cloud-spec" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Obsidian 'Q' Body Gradient -->
+    <linearGradient id="v5-4b-obsidian" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E293B"/>
+      <stop offset="50%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#050811"/>
+    </linearGradient>
+
+    <!-- Specular Highlight on Obsidian Q -->
+    <linearGradient id="v5-4b-specular" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.85"/>
+      <stop offset="40%" stop-color="#94A3B8" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#1E293B" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Electric Flare Tail Gradient -->
+    <linearGradient id="v5-4b-tail" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="30%" stop-color="#FDE047"/>
+      <stop offset="70%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#EA580C"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dark Tile Badge -->
+  <rect width="512" height="512" rx="118" fill="url(#v5-4b-bg)"/>
+  <rect x="1.5" y="1.5" width="509" height="509" rx="116.5" fill="none" stroke="url(#v5-4b-border)" stroke-width="2"/>
+
+  <!-- ==================== 1. OPTICALLY BALANCED CLOUDFLARE CLOUD ==================== -->
+  <!-- Centered horizontally at x = 256 (span: 46 to 466, width: 420) -->
+  <path d="M 138 345 
+           L 410 345 
+           C 442 345, 466 321, 466 289 
+           C 466 259, 444 233, 414 229 
+           C 408 171, 362 125, 304 125 
+           C 260 125, 222 149, 202 183 
+           C 190 177, 176 173, 162 173 
+           C 126 173, 96 201, 94 237 
+           C 66 243, 46 267, 46 299 
+           C 46 327, 68 345, 96 345 
+           Z" 
+        fill="url(#v5-4b-cloud)"/>
+
+  <!-- Cloud Dome Specular Highlight -->
+  <path d="M 218 178 C 242 144, 276 133, 304 133 C 350 133, 390 165, 404 212" 
+        fill="none" stroke="url(#v5-4b-cloud-spec)" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- ==================== 2. PROPORTIONALLY BALANCED OBSIDIAN 'Q' ==================== -->
+  <!-- Center: (246, 238), Radius: 56, Stroke: 34 (Balanced golden ratio scale) -->
+  <g id="balanced-q">
+    <!-- Clean Vector Drop Shadow on Cloud Surface (No blur) -->
+    <circle cx="246" cy="242" r="56" fill="none" stroke="#000000" stroke-width="38" opacity="0.38"/>
+    <path d="M 275 271 L 370 366" stroke="#000000" stroke-width="38" stroke-linecap="round" opacity="0.38"/>
+
+    <!-- Main Obsidian 'Q' Ring -->
+    <circle cx="246" cy="238" r="56" 
+            fill="none" stroke="url(#v5-4b-obsidian)" stroke-width="34" stroke-linecap="round"/>
+
+    <!-- Specular Highlight Ridge on Obsidian Ring -->
+    <path d="M 195 238 A 56 56 0 0 1 300 210" 
+          fill="none" stroke="url(#v5-4b-specular)" stroke-width="6" stroke-linecap="round"/>
+
+    <!-- Deep Tunnel Core Void -->
+    <circle cx="246" cy="238" r="39" fill="#04070E" stroke="#1E293B" stroke-width="2.5"/>
+
+    <!-- Electric Flare Tail Slicing past the Cloud Baseline to (370, 362) -->
+    <path d="M 275 267 L 370 362" 
+          fill="none" stroke="url(#v5-4b-tail)" stroke-width="34" stroke-linecap="round"/>
+
+    <!-- 4-Point Solar Flare Star -->
+    <g transform="translate(370, 362)">
+      <path d="M 0 -28 Q 0 0 28 0 Q 0 0 0 28 Q 0 0 -28 0 Q 0 0 0 -28 Z" fill="#FFFFFF"/>
+      <circle cx="0" cy="0" r="5.5" fill="#FDE047"/>
+    </g>
+  </g>
+</svg>

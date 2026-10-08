@@ -41,14 +41,16 @@ func (s *session) withAccount(ctx context.Context) error {
 		return nil
 	}
 	accounts, err := s.client.Accounts(ctx)
-	if err != nil {
-		return fmt.Errorf("list accounts: %w", err)
+	if err == nil && len(accounts) > 0 {
+		s.client.SetAccountID(accounts[0].ID)
+		return nil
 	}
-	if len(accounts) == 0 {
-		return fmt.Errorf("token can see no accounts - check its permissions")
+	zones, err := s.client.Zones(ctx, "")
+	if err == nil && len(zones) > 0 && zones[0].Account.ID != "" {
+		s.client.SetAccountID(zones[0].Account.ID)
+		return nil
 	}
-	s.client.SetAccountID(accounts[0].ID)
-	return nil
+	return fmt.Errorf("token can see no accounts or zones - check its permissions")
 }
 
 // withTunnel finds or creates the QuickFlare tunnel.
