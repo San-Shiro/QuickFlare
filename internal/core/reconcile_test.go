@@ -2,6 +2,8 @@ package core
 
 import (
 	"testing"
+
+	"github.com/San-Shiro/QuickFlare/internal/cloudflare"
 )
 
 // The decision table that governs whether a route survives a restart.
@@ -95,6 +97,55 @@ func TestApplyReconcileDNSUnknownDoesNotClaimConnected(t *testing.T) {
 	}
 	if kept[0].Detail != "checking DNS..." {
 		t.Errorf("expected detail 'checking DNS...', got %q", kept[0].Detail)
+	}
+}
+
+func TestReconcilePreservesAndAdoptsOriginSettings(t *testing.T) {
+	stored := []Route{
+		{
+			Hostname: "custom.example.com",
+			Target:   "https://localhost:8443",
+			ZoneID:   "z1",
+			Origin: OriginSettings{
+				NoTLSVerify:    true,
+				HTTPHostHeader: "app.internal",
+			},
+		},
+	}
+	states := map[string]*State{
+		"custom.example.com": {
+			InDNS:     true,
+			InIngress: true,
+			Target:    "https://localhost:8443",
+		},
+		"discovered.example.com": {
+			InDNS:     true,
+			InIngress: true,
+			Target:    "https://localhost:9443",
+			Origin: &cloudflare.OriginRequest{
+				NoTLSVerify: true,
+			},
+		},
+	}
+
+	kept, _, adopted := ReconcileList(stored, states, "z1")
+	if len(kept) != 2 {
+		t.Fatalf("expected 2 kept routes, got %d", len(kept))
+	}
+	if len(adopted) != 1 || adopted[0] != "discovered.example.com" {
+		t.Errorf("expected discovered.example.com adopted, got %v", adopted)
+	}
+
+	byHost := map[string]Route{}
+	for _, r := range kept {
+		byHost[r.Hostname] = r
+	}
+
+	if r := byHost["custom.example.com"]; !r.Origin.NoTLSVerify || r.Origin.HTTPHostHeader != "app.internal" {
+		t.Errorf("custom.example.com lost its origin settings: %+v", r.Origin)
+	}
+	if r := byHost["discovered.example.com"]; !r.Origin.NoTLSVerify {
+		t.Errorf("discovered.example.com did not adopt origin settings: %+v", r.Origin)
 	}
 }
 

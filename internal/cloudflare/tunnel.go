@@ -38,9 +38,11 @@ type IngressRule struct {
 // are modelled; the rest round-trip untouched because we always read before
 // we write.
 type OriginRequest struct {
-	ConnectTimeout int    `json:"connectTimeout,omitempty"`
-	NoTLSVerify    bool   `json:"noTLSVerify,omitempty"`
-	HTTPHostHeader string `json:"httpHostHeader,omitempty"`
+	ConnectTimeout   int    `json:"connectTimeout,omitempty"`
+	NoTLSVerify      bool   `json:"noTLSVerify,omitempty"`
+	HTTPHostHeader   string `json:"httpHostHeader,omitempty"`
+	OriginServerName string `json:"originServerName,omitempty"`
+	Http2Origin      bool   `json:"http2Origin,omitempty"`
 }
 
 // TunnelConfigDoc is the routing document for a remotely-managed tunnel.
@@ -164,6 +166,11 @@ func (c *Client) UpdateIngress(ctx context.Context, tunnelID string, mutate func
 // AddRoute points a hostname at a local service, replacing any existing rule
 // for the same hostname so repeated adds are idempotent.
 func (c *Client) AddRoute(ctx context.Context, tunnelID, hostname, service string) error {
+	return c.AddRouteWithOrigin(ctx, tunnelID, hostname, service, nil)
+}
+
+// AddRouteWithOrigin points a hostname at a local service with optional origin settings.
+func (c *Client) AddRouteWithOrigin(ctx context.Context, tunnelID, hostname, service string, origin *OriginRequest) error {
 	return c.UpdateIngress(ctx, tunnelID, func(rules []IngressRule) []IngressRule {
 		out := make([]IngressRule, 0, len(rules)+1)
 		for _, r := range rules {
@@ -171,7 +178,11 @@ func (c *Client) AddRoute(ctx context.Context, tunnelID, hostname, service strin
 				out = append(out, r)
 			}
 		}
-		return append(out, IngressRule{Hostname: hostname, Service: service})
+		return append(out, IngressRule{
+			Hostname:      hostname,
+			Service:       service,
+			OriginRequest: origin,
+		})
 	})
 }
 

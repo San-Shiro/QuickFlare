@@ -18,6 +18,7 @@ import (
 
 	"github.com/San-Shiro/QuickFlare/internal/autostart"
 	"github.com/San-Shiro/QuickFlare/internal/installer"
+	"github.com/San-Shiro/QuickFlare/internal/supervisor"
 )
 
 // panelInset is the horizontal gutter shared by every screen.
@@ -143,6 +144,10 @@ func (p *Panel) statusBar(gtx layout.Context, withActions bool) layout.Dimension
 					return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
 						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 							return p.iconButton(gtx, &p.docsBtn, p.ic.external, dimIconBtnFoot, colTextDisabled)
+						}),
+						layout.Rigid(hgap(sp1)),
+						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+							return p.iconButton(gtx, &p.logsBtn, p.ic.logs, dimIconBtnFoot, colTextMuted)
 						}),
 						layout.Rigid(hgap(sp1)),
 						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -407,14 +412,20 @@ func (p *Panel) settingsRows() []layout.Widget {
 			return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					gtx.Constraints.Min.X = 0
-					gtx.Constraints.Max.X = gtx.Dp(unit.Dp(136))
-					return p.secondaryButton(gtx, &p.reportBugBtn, "Report issue")
+					gtx.Constraints.Max.X = gtx.Dp(unit.Dp(110))
+					return p.secondaryButton(gtx, &p.viewLogsBtn, "Live logs")
 				}),
-				layout.Rigid(hgap(sp4)),
+				layout.Rigid(hgap(sp3)),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					gtx.Constraints.Min.X = 0
-					gtx.Constraints.Max.X = gtx.Dp(unit.Dp(124))
+					gtx.Constraints.Max.X = gtx.Dp(unit.Dp(105))
 					return p.secondaryButton(gtx, &p.openLogsBtn, "Open logs")
+				}),
+				layout.Rigid(hgap(sp3)),
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					gtx.Constraints.Min.X = 0
+					gtx.Constraints.Max.X = gtx.Dp(unit.Dp(90))
+					return p.secondaryButton(gtx, &p.reportBugBtn, "Report")
 				}),
 			)
 		},
@@ -727,6 +738,7 @@ func (p *Panel) connectionList(gtx layout.Context) layout.Dimensions {
 				portListening: listening,
 				hasPortCheck:  hasCheck,
 				copyBtn:       &r.copyBtn,
+				curlBtn:       &r.curlBtn,
 				stopBtn:       &r.stopBtn,
 				copiedAt:      r.copiedAt,
 			})
@@ -749,6 +761,7 @@ func (p *Panel) connectionList(gtx layout.Context) layout.Dimensions {
 			portListening: listening,
 			hasPortCheck:  hasCheck,
 			copyBtn:       &q.copyBtn,
+			curlBtn:       &q.curlBtn,
 			stopBtn:       &q.stopBtn,
 			copiedAt:      q.copiedAt,
 		})
@@ -795,6 +808,7 @@ type pillData struct {
 	portListening bool
 	hasPortCheck  bool
 	copyBtn       *widget.Clickable
+	curlBtn       *widget.Clickable
 	stopBtn       *widget.Clickable
 	copiedAt      time.Time
 }
@@ -807,7 +821,7 @@ func (p *Panel) pill(gtx layout.Context, d pillData) layout.Dimensions {
 	return layout.Inset{Bottom: unit.Dp(dimPillGap)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return fixedH(gtx, dimPillH, func(gtx layout.Context) layout.Dimensions {
 			bg := colSurface
-			if d.copyBtn.Hovered() || d.stopBtn.Hovered() {
+			if d.copyBtn.Hovered() || d.curlBtn.Hovered() || d.stopBtn.Hovered() {
 				bg = colSurfaceRaised
 			}
 			fillRRect(gtx, gtx.Constraints.Max, rCard, bg)
@@ -851,6 +865,11 @@ func (p *Panel) pill(gtx layout.Context, d pillData) layout.Dimensions {
 						}
 						return p.iconButton(gtx, d.copyBtn, ic, dimIconBtnList, tint)
 					}),
+					layout.Rigid(hgap(sp1)),
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return p.iconButton(gtx, d.curlBtn, p.ic.code, dimIconBtnList, colTextMuted)
+					}),
+					layout.Rigid(hgap(sp1)),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 						return p.iconButton(gtx, d.stopBtn, p.ic.delete, dimIconBtnList, colError)
 					}),
@@ -955,7 +974,45 @@ func (p *Panel) addRouteView(gtx layout.Context) layout.Dimensions {
 							})
 						})
 					}),
-					layout.Rigid(vgap(sp5)),
+					layout.Rigid(vgap(sp4)),
+
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						chevronTxt := "▸ Advanced origin settings"
+						if p.advOriginOpen {
+							chevronTxt = "▾ Advanced origin settings"
+						}
+						return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+								return p.advOriginBtn.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+									c := colTextMuted
+									if p.advOriginBtn.Hovered() {
+										c = colTextPrimary
+									}
+									return p.caption(chevronTxt, c)(gtx)
+								})
+							}),
+							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+								if !p.advOriginOpen {
+									return layout.Dimensions{}
+								}
+								return layout.Inset{Top: unit.Dp(sp3), Bottom: unit.Dp(sp2)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+									return surface(gtx, colSurfaceRaised, rCard, func(gtx layout.Context) layout.Dimensions {
+										return layout.UniformInset(unit.Dp(sp4)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+											return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+												layout.Rigid(p.settingToggle("Disable TLS verify (self-signed HTTPS)", &p.noTLSVerifyBtn, p.noTLSVerifyOn)),
+												layout.Rigid(vgap(sp2)),
+												layout.Rigid(p.caption("Accepts local HTTPS certificates from Vite, mkcert, etc.", colTextDisabled)),
+												layout.Rigid(vgap(sp4)),
+												layout.Rigid(p.fieldLabel("Host header override")),
+												layout.Rigid(p.input(&p.hostHeaderEd, "e.g. localhost")),
+											)
+										})
+									})
+								})
+							}),
+						)
+					}),
+					layout.Rigid(vgap(sp4)),
 
 					layout.Rigid(p.caption(
 						"The route is public once it is live. Anyone who knows the address can reach it.",
@@ -1105,3 +1162,114 @@ func (p *Panel) confirmDeleteView(gtx layout.Context) layout.Dimensions {
 	p.deleteOverlay(gtx)
 	return dims
 }
+
+// logsView renders the live in-memory cloudflared log stream with Prometheus telemetry.
+func (p *Panel) logsView(gtx layout.Context) layout.Dimensions {
+	var lines []string
+	var tel supervisor.Telemetry
+	if p.tunnel != nil {
+		lines = p.tunnel.RecentLogs()
+		tel = p.tunnel.Telemetry()
+	}
+
+	filter := strings.ToLower(strings.TrimSpace(p.logFilterEd.Text()))
+	var filtered []string
+	if filter == "" {
+		filtered = lines
+	} else {
+		for _, l := range lines {
+			if strings.Contains(strings.ToLower(l), filter) {
+				filtered = append(filtered, l)
+			}
+		}
+	}
+
+	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return p.header(gtx, "Live tunnel logs", true)
+		}),
+		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+			return panelInset(func(gtx layout.Context) layout.Dimensions {
+				return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+					// Telemetry summary chip
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						reqInfo := fmt.Sprintf("%d conns · %d reqs (%d ok, %d err)",
+							tel.HAConnections, tel.TotalRequests, tel.Status2xx, tel.Status4xx+tel.Status5xx)
+						if tel.ActiveStreams > 0 {
+							reqInfo += fmt.Sprintf(" · %d active", tel.ActiveStreams)
+						}
+						return surface(gtx, colSurfaceRaised, rCard, func(gtx layout.Context) layout.Dimensions {
+							return layout.UniformInset(unit.Dp(sp3)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+								return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
+									layout.Rigid(statusDot(colAccent, dimDotStatusBar)),
+									layout.Rigid(hgap(sp3)),
+									layout.Rigid(p.mono(reqInfo, tsCaption, wRegular, colTextMuted)),
+								)
+							})
+						})
+					}),
+					layout.Rigid(vgap(sp3)),
+
+					// Filter & Action Bar
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
+							layout.Flexed(1, p.input(&p.logFilterEd, "Filter logs...")),
+							layout.Rigid(hgap(sp2)),
+							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+								return p.secondaryButton(gtx, &p.logCopyBtn, "Copy")
+							}),
+							layout.Rigid(hgap(sp2)),
+							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+								return p.secondaryButton(gtx, &p.logClearBtn, "Clear")
+							}),
+						)
+					}),
+					layout.Rigid(vgap(sp3)),
+
+					// Scrollable Log Box
+					layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+						return surface(gtx, colSurface, rCard, func(gtx layout.Context) layout.Dimensions {
+							return outlined(gtx, colBorderSubtle, rCard, func(gtx layout.Context) layout.Dimensions {
+								return layout.UniformInset(unit.Dp(sp4)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+									if len(filtered) == 0 {
+										emptyMsg := "No log lines recorded yet. cloudflared events will stream here."
+										if filter != "" {
+											emptyMsg = "No logs match the current filter."
+										}
+										return p.caption(emptyMsg, colTextDisabled)(gtx)
+									}
+									return p.logList.Layout(gtx, len(filtered), func(gtx layout.Context, i int) layout.Dimensions {
+										line := filtered[i]
+										lineColor := colTextMuted
+										lower := strings.ToLower(line)
+										if strings.Contains(lower, "err") || strings.Contains(lower, "fail") {
+											lineColor = colError
+										} else if strings.Contains(lower, "warn") || strings.Contains(lower, "reconnect") {
+											lineColor = colWarning
+										} else if strings.Contains(lower, "registered") || strings.Contains(lower, "connected") {
+											lineColor = colSuccess
+										}
+
+										return layout.Inset{Bottom: unit.Dp(sp1)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+											return p.monoOneLine(line, tsCaption, 400, lineColor)(gtx)
+										})
+									})
+								})
+							})
+						})
+					}),
+					layout.Rigid(vgap(sp3)),
+				)
+			})(gtx)
+		}),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return panelInset(func(gtx layout.Context) layout.Dimensions {
+				return layout.Inset{Bottom: unit.Dp(sp3)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+					return p.secondaryButton(gtx, &p.logBackBtn, "Back to routes")
+				})
+			})(gtx)
+		}),
+		layout.Rigid(p.statusBarRigid(false)),
+	)
+}
+

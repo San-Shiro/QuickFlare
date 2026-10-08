@@ -42,6 +42,19 @@ func (s Status) String() string {
 	return "idle"
 }
 
+// OriginSettings holds optional per-route origin proxy configuration.
+type OriginSettings struct {
+	NoTLSVerify      bool   `json:"no_tls_verify,omitempty"`
+	HTTPHostHeader   string `json:"http_host_header,omitempty"`
+	OriginServerName string `json:"origin_server_name,omitempty"`
+	Http2Origin      bool   `json:"http2_origin,omitempty"`
+}
+
+// IsZero reports whether no origin settings have been configured.
+func (o OriginSettings) IsZero() bool {
+	return !o.NoTLSVerify && o.HTTPHostHeader == "" && o.OriginServerName == "" && !o.Http2Origin
+}
+
 // Route is one published hostname on the user's own domain.
 //
 // This carries no presentation state. A frontend that needs per-row widgets
@@ -57,6 +70,9 @@ type Route struct {
 	// rather than looked up at deletion time: a user with several domains
 	// would otherwise have a delete aimed at whichever zone is selected now.
 	ZoneID string
+
+	// Origin holds optional per-route proxy origin settings.
+	Origin OriginSettings
 }
 
 // ParsePort validates a port number.

@@ -38,6 +38,7 @@ type State struct {
 	DNS       DNSState
 	InIngress bool
 	Target    string // local target, as the ingress rule has it
+	Origin    *cloudflare.OriginRequest
 }
 
 // FetchStates reads Cloudflare's view of every hostname the tunnel serves,
@@ -59,6 +60,7 @@ func FetchStates(ctx context.Context, client *cloudflare.Client, tunnelID, defau
 		states[host] = &State{
 			InIngress: true,
 			Target:    strings.TrimPrefix(rule.Service, "http://"),
+			Origin:    rule.OriginRequest,
 		}
 	}
 
@@ -117,6 +119,14 @@ func ReconcileList(stored []Route, states map[string]*State, defaultZone string)
 			if r.ZoneID == "" {
 				r.ZoneID = defaultZone
 			}
+			if r.Origin.IsZero() && st.Origin != nil {
+				r.Origin = OriginSettings{
+					NoTLSVerify:      st.Origin.NoTLSVerify,
+					HTTPHostHeader:   st.Origin.HTTPHostHeader,
+					OriginServerName: st.Origin.OriginServerName,
+					Http2Origin:      st.Origin.Http2Origin,
+				}
+			}
 
 			if (st.DNS == DNSPresent || (st.DNS == 0 && st.InDNS)) && st.InIngress {
 				r.Status, r.Detail = StatusConnected, ""
@@ -139,6 +149,14 @@ func ReconcileList(stored []Route, states map[string]*State, defaultZone string)
 		// Serving on Cloudflare but absent from local cache - adopt it,
 		// using the port the ingress rule already names.
 		r := Route{Hostname: host, Target: st.Target, ZoneID: defaultZone}
+		if st.Origin != nil {
+			r.Origin = OriginSettings{
+				NoTLSVerify:      st.Origin.NoTLSVerify,
+				HTTPHostHeader:   st.Origin.HTTPHostHeader,
+				OriginServerName: st.Origin.OriginServerName,
+				Http2Origin:      st.Origin.Http2Origin,
+			}
+		}
 		adopted = append(adopted, host)
 		if st.InDNS && st.InIngress {
 			r.Status, r.Detail = StatusConnected, ""

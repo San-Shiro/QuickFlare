@@ -58,11 +58,13 @@ type Status struct {
 type Tunnel struct {
 	binPath string
 
-	mu     sync.RWMutex
-	status Status
-	cancel context.CancelFunc
+	mu        sync.RWMutex
+	status    Status
+	telemetry Telemetry
+	cancel    context.CancelFunc
 
 	logs   chan string
+	ring   *LogRing
 	onStat func(Status)
 }
 
@@ -72,6 +74,7 @@ func NewTunnel(binPath string) *Tunnel {
 		binPath: binPath,
 		status:  Status{State: StateStopped, Since: time.Now()},
 		logs:    make(chan string, 256),
+		ring:    NewLogRing(defaultLogRingCapacity),
 	}
 }
 
@@ -82,6 +85,21 @@ func (t *Tunnel) OnStatus(f func(Status)) { t.onStat = f }
 // Logs streams cloudflared's stderr. Lines are dropped rather than queued when
 // nobody is reading, so a chatty connector can never stall the process.
 func (t *Tunnel) Logs() <-chan string { return t.logs }
+
+// RecentLogs returns a chronological snapshot of the most recent log lines.
+func (t *Tunnel) RecentLogs() []string {
+	if t.ring == nil {
+		return nil
+	}
+	return t.ring.Entries()
+}
+
+// Telemetry returns the latest parsed Prometheus telemetry from cloudflared.
+func (t *Tunnel) Telemetry() Telemetry {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.telemetry
+}
 
 // Status returns the current snapshot.
 func (t *Tunnel) Status() Status {
@@ -127,6 +145,7 @@ func (t *Tunnel) Stop() {
 	t.mu.Lock()
 	cancel := t.cancel
 	t.cancel = nil
+	t.telemetry = Telemetry{}
 	t.mu.Unlock()
 
 	if cancel != nil {
@@ -214,13 +233,17 @@ func (t *Tunnel) runOnce(ctx context.Context, token string) error {
 	return cmd.Wait()
 }
 
-// pumpLogs forwards stderr lines, dropping them if nobody is listening.
+// pumpLogs forwards stderr lines, recording into ring buffer and streaming to channel.
 func (t *Tunnel) pumpLogs(r io.Reader) {
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 0, 64*1024), 1<<20)
 	for sc.Scan() {
+		line := sc.Text()
+		if t.ring != nil {
+			t.ring.Add(line)
+		}
 		select {
-		case t.logs <- sc.Text():
+		case t.logs <- line:
 		default:
 		}
 	}
@@ -239,11 +262,13 @@ type readyResponse struct {
 // reports the connection count, which the log lines do not.
 func (t *Tunnel) pollReady(ctx context.Context, metricsAddr string) {
 	url := "http://" + metricsAddr + "/ready"
+	metricsURL := "http://" + metricsAddr + "/metrics"
 	client := &http.Client{Timeout: 2 * time.Second}
 
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
+	pollCount := 0
 	for {
 		select {
 		case <-ctx.Done():
@@ -272,6 +297,19 @@ func (t *Tunnel) pollReady(ctx context.Context, metricsAddr string) {
 			t.setState(StateConnected, ready.ReadyConnections, nil)
 		} else {
 			t.setState(StateStarting, ready.ReadyConnections, nil)
+		}
+
+		pollCount++
+		if pollCount%2 == 0 {
+			if reqM, err := http.NewRequestWithContext(ctx, "GET", metricsURL, nil); err == nil {
+				if respM, err := client.Do(reqM); err == nil {
+					tel := ParsePrometheusMetrics(io.LimitReader(respM.Body, 256<<10))
+					respM.Body.Close()
+					t.mu.Lock()
+					t.telemetry = tel
+					t.mu.Unlock()
+				}
+			}
 		}
 	}
 }

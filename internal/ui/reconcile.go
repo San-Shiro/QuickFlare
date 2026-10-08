@@ -79,7 +79,7 @@ func (p *Panel) applyReconcile(stored []core.Route, states map[string]*core.Stat
 	// Every step adopts what is already there, so this is safe to run over
 	// a route that turns out to be healthy after all.
 	for _, r := range repair {
-		p.provisionRoute(r.Hostname, r.Target)
+		p.provisionRouteWithOrigin(r.Hostname, r.Target, r.Origin)
 	}
 	p.triggerPortProbe()
 }

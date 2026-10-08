@@ -166,3 +166,30 @@ func TestAPIErrorSurfacesCloudflareCodes(t *testing.T) {
 		t.Errorf("IsAlreadyExists should recognise 81053, got %v", err)
 	}
 }
+
+func TestAddRouteWithOrigin(t *testing.T) {
+	f := &fakeAPI{current: []IngressRule{{Service: CatchAllService}}}
+	srv := f.server(t)
+	defer srv.Close()
+
+	c := New("tok", "acct", WithBaseURL(srv.URL))
+	origin := &OriginRequest{
+		NoTLSVerify:    true,
+		HTTPHostHeader: "example.local",
+	}
+	if err := c.AddRouteWithOrigin(context.Background(), "t1", "secure.example.com", "https://localhost:8443", origin); err != nil {
+		t.Fatalf("AddRouteWithOrigin: %v", err)
+	}
+
+	got := f.written.Ingress
+	if len(got) != 2 {
+		t.Fatalf("expected 2 rules, got %+v", got)
+	}
+	rule := got[0]
+	if rule.Hostname != "secure.example.com" || rule.Service != "https://localhost:8443" {
+		t.Errorf("unexpected rule fields: %+v", rule)
+	}
+	if rule.OriginRequest == nil || !rule.OriginRequest.NoTLSVerify || rule.OriginRequest.HTTPHostHeader != "example.local" {
+		t.Errorf("unexpected origin request: %+v", rule.OriginRequest)
+	}
+}

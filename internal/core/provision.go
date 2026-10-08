@@ -58,6 +58,11 @@ func FindOrCreateTunnel(ctx context.Context, client *cloudflare.Client) (*cloudf
 // Safe to run again over a route that already exists - each step adopts what
 // is already there - which is what makes it usable as a repair.
 func Publish(ctx context.Context, client *cloudflare.Client, zoneID, tunnelID, hostname, target string) error {
+	return PublishWithOrigin(ctx, client, zoneID, tunnelID, hostname, target, nil)
+}
+
+// PublishWithOrigin points a hostname at the tunnel with optional origin settings.
+func PublishWithOrigin(ctx context.Context, client *cloudflare.Client, zoneID, tunnelID, hostname, target string, origin *OriginSettings) error {
 	if client == nil {
 		return fmt.Errorf("not connected to Cloudflare")
 	}
@@ -71,7 +76,16 @@ func Publish(ctx context.Context, client *cloudflare.Client, zoneID, tunnelID, h
 	if _, err := client.EnsureRouteCNAME(ctx, zoneID, hostname, tunnelID); err != nil {
 		return err
 	}
-	if err := client.AddRoute(ctx, tunnelID, hostname, NormalizeTarget(target)); err != nil {
+	var cfOrigin *cloudflare.OriginRequest
+	if origin != nil && !origin.IsZero() {
+		cfOrigin = &cloudflare.OriginRequest{
+			NoTLSVerify:      origin.NoTLSVerify,
+			HTTPHostHeader:   origin.HTTPHostHeader,
+			OriginServerName: origin.OriginServerName,
+			Http2Origin:      origin.Http2Origin,
+		}
+	}
+	if err := client.AddRouteWithOrigin(ctx, tunnelID, hostname, NormalizeTarget(target), cfOrigin); err != nil {
 		return fmt.Errorf("ingress: %w", err)
 	}
 	return nil

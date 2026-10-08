@@ -99,6 +99,12 @@ func (s *session) routes() []core.Route {
 			Hostname: r.Hostname,
 			Target:   r.Target,
 			ZoneID:   r.ZoneID,
+			Origin: core.OriginSettings{
+				NoTLSVerify:      r.Origin.NoTLSVerify,
+				HTTPHostHeader:   r.Origin.HTTPHostHeader,
+				OriginServerName: r.Origin.OriginServerName,
+				Http2Origin:      r.Origin.Http2Origin,
+			},
 		})
 	}
 	return out
@@ -112,6 +118,12 @@ func (s *session) saveRoutes(routes []core.Route) error {
 			Hostname: r.Hostname,
 			Target:   r.Target,
 			ZoneID:   r.ZoneID,
+			Origin: config.StoredOriginSettings{
+				NoTLSVerify:      r.Origin.NoTLSVerify,
+				HTTPHostHeader:   r.Origin.HTTPHostHeader,
+				OriginServerName: r.Origin.OriginServerName,
+				Http2Origin:      r.Origin.Http2Origin,
+			},
 		})
 	}
 	s.cfg.Routes = stored

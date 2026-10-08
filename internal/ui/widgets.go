@@ -31,6 +31,8 @@ type iconSet struct {
 	chevron  *widget.Icon
 	check    *widget.Icon
 	external *widget.Icon
+	logs     *widget.Icon
+	code     *widget.Icon
 }
 
 func newIcons() *iconSet {
@@ -53,6 +55,8 @@ func newIcons() *iconSet {
 		chevron:  must(icons.NavigationExpandMore),
 		check:    must(icons.NavigationCheck),
 		external: must(icons.ActionOpenInNew),
+		logs:     must(icons.ActionSubject),
+		code:     must(icons.ActionCode),
 	}
 }
 

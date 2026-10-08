@@ -40,6 +40,7 @@ const (
 	viewAddRoute
 	viewSettings
 	viewConfirmDelete
+	viewLogs
 )
 
 // listMode is which source the main list is showing.
@@ -84,6 +85,7 @@ type Route struct {
 	core.Route
 
 	copyBtn  widget.Clickable
+	curlBtn  widget.Clickable
 	stopBtn  widget.Clickable
 	copiedAt time.Time
 }
@@ -104,6 +106,7 @@ type QuickEntry struct {
 	cancel context.CancelFunc
 
 	copyBtn  widget.Clickable
+	curlBtn  widget.Clickable
 	stopBtn  widget.Clickable
 	copiedAt time.Time
 }
@@ -245,10 +248,15 @@ type Panel struct {
 	winFadeStart time.Time
 
 	// Add route
-	hostEd    widget.Editor
-	portEd    widget.Editor
-	createBtn widget.Clickable
-	cancelBtn widget.Clickable
+	hostEd         widget.Editor
+	portEd         widget.Editor
+	createBtn      widget.Clickable
+	cancelBtn      widget.Clickable
+	advOriginOpen  bool
+	advOriginBtn   widget.Clickable
+	noTLSVerifyOn  bool
+	noTLSVerifyBtn widget.Clickable
+	hostHeaderEd   widget.Editor
 
 	// Live port reachability cache
 	portsMu        sync.RWMutex
@@ -262,6 +270,15 @@ type Panel struct {
 	// Settings: startup state
 	restoreLastState bool
 	restoreStateBtn  widget.Clickable
+
+	// Log viewer & telemetry
+	logsBtn     widget.Clickable
+	viewLogsBtn widget.Clickable
+	logBackBtn  widget.Clickable
+	logCopyBtn  widget.Clickable
+	logClearBtn widget.Clickable
+	logFilterEd widget.Editor
+	logList     layout.List
 }
 
 type viewTransition struct {
@@ -333,12 +350,13 @@ func NewPanel() *Panel {
 		view:       viewOnboarding,
 		statusTone: colTextDisabled,
 	}
-	for _, ed := range []*widget.Editor{&p.hostEd, &p.portEd, &p.tokenEd} {
+	for _, ed := range []*widget.Editor{&p.hostEd, &p.portEd, &p.tokenEd, &p.hostHeaderEd, &p.logFilterEd} {
 		ed.SingleLine = true
 	}
 	p.tokenEd.Mask = '•'
 	p.connList.Axis = layout.Vertical
 	p.setupList.Axis = layout.Vertical
+	p.logList.Axis = layout.Vertical
 
 	log.Printf("[panel] NewPanel: locating cloudflared binary...")
 	p.binPath, p.binErr = supervisor.FindBinary()
@@ -480,6 +498,12 @@ func (p *Panel) storedRoutes() []config.StoredRoute {
 			Hostname: r.Hostname,
 			Target:   r.Target,
 			ZoneID:   r.ZoneID,
+			Origin: config.StoredOriginSettings{
+				NoTLSVerify:      r.Origin.NoTLSVerify,
+				HTTPHostHeader:   r.Origin.HTTPHostHeader,
+				OriginServerName: r.Origin.OriginServerName,
+				Http2Origin:      r.Origin.Http2Origin,
+			},
 		})
 	}
 	return out
@@ -525,6 +549,12 @@ func (p *Panel) restore() {
 			Hostname: sr.Hostname,
 			Target:   sr.Target,
 			ZoneID:   sr.ZoneID,
+			Origin: core.OriginSettings{
+				NoTLSVerify:      sr.Origin.NoTLSVerify,
+				HTTPHostHeader:   sr.Origin.HTTPHostHeader,
+				OriginServerName: sr.Origin.OriginServerName,
+				Http2Origin:      sr.Origin.Http2Origin,
+			},
 			Status:   statusIdle,
 			Detail:   detail,
 		}})
@@ -1034,6 +1064,29 @@ func (p *Panel) handleInput(gtx layout.Context) {
 		if p.openLogsBtn.Clicked(gtx) {
 			p.openLogsDirectory()
 		}
+		if p.viewLogsBtn.Clicked(gtx) {
+			p.setView(viewLogs)
+		}
+
+	case viewLogs:
+		if p.logBackBtn.Clicked(gtx) || p.cancelBtn.Clicked(gtx) {
+			p.setView(viewMain)
+		}
+		if p.logCopyBtn.Clicked(gtx) {
+			if p.tunnel != nil {
+				lines := p.tunnel.RecentLogs()
+				if len(lines) > 0 {
+					writeClipboard(gtx, strings.Join(lines, "\n"))
+					p.setStatus("Copied logs to clipboard", colSuccess)
+				} else {
+					p.setStatus("No logs to copy", colWarning)
+				}
+			}
+		}
+		if p.logClearBtn.Clicked(gtx) {
+			p.logFilterEd.SetText("")
+			p.setStatus("Log filter reset", colTextMuted)
+		}
 
 	case viewMain:
 		p.handleMainInput(gtx)
@@ -1053,6 +1106,12 @@ func (p *Panel) handleInput(gtx layout.Context) {
 		if p.cancelBtn.Clicked(gtx) {
 			p.setView(viewMain)
 		}
+		if p.advOriginBtn.Clicked(gtx) {
+			p.advOriginOpen = !p.advOriginOpen
+		}
+		if p.noTLSVerifyBtn.Clicked(gtx) {
+			p.noTLSVerifyOn = !p.noTLSVerifyOn
+		}
 		if p.createBtn.Clicked(gtx) {
 			if p.mode == modeQuick {
 				port, err := parsePort(strings.TrimSpace(p.portEd.Text()))
@@ -1069,7 +1128,7 @@ func (p *Panel) handleInput(gtx layout.Context) {
 				p.setStatus("Publishing "+shortHost(r.Hostname)+"...", colWarning)
 				p.setView(viewMain)
 				p.saveConfig()
-				p.provisionRoute(r.Hostname, r.Target)
+				p.provisionRouteWithOrigin(r.Hostname, r.Target, r.Origin)
 				p.triggerPortProbe()
 			}
 		}
@@ -1110,6 +1169,9 @@ func (p *Panel) handleMainInput(gtx layout.Context) {
 		p.tokenEd.SetText(p.settings.APIToken)
 		p.setView(viewSettings)
 	}
+	if p.logsBtn.Clicked(gtx) {
+		p.setView(viewLogs)
+	}
 	if p.docsBtn.Clicked(gtx) {
 		if docsURL == "" {
 			p.setStatus("No repository yet - docs link not set", colWarning)
@@ -1126,6 +1188,9 @@ func (p *Panel) handleMainInput(gtx layout.Context) {
 			if p.routes[i].copyBtn.Clicked(gtx) {
 				p.copyConn(gtx, "https://"+p.routes[i].Hostname, &p.routes[i].copiedAt)
 			}
+			if p.routes[i].curlBtn.Clicked(gtx) {
+				p.copyConn(gtx, "curl -i https://"+p.routes[i].Hostname, &p.routes[i].copiedAt)
+			}
 			if p.routes[i].stopBtn.Clicked(gtx) {
 				p.pendingDelete = p.routes[i].Hostname
 				p.deleteFadeStart = time.Now()
@@ -1139,6 +1204,9 @@ func (p *Panel) handleMainInput(gtx layout.Context) {
 	for i := range p.quicks {
 		if p.quicks[i].copyBtn.Clicked(gtx) && p.quicks[i].URL != "" {
 			p.copyConn(gtx, p.quicks[i].URL, &p.quicks[i].copiedAt)
+		}
+		if p.quicks[i].curlBtn.Clicked(gtx) && p.quicks[i].URL != "" {
+			p.copyConn(gtx, "curl -i "+p.quicks[i].URL, &p.quicks[i].copiedAt)
 		}
 		if p.quicks[i].stopBtn.Clicked(gtx) {
 			p.stopQuick(i)
@@ -1161,6 +1229,9 @@ func (p *Panel) startAdd() {
 	}
 	p.hostEd.SetText("")
 	p.portEd.SetText("")
+	p.hostHeaderEd.SetText("")
+	p.noTLSVerifyOn = false
+	p.advOriginOpen = false
 	p.setView(viewAddRoute)
 }
 
@@ -1341,9 +1412,22 @@ func (p *Panel) buildRoute() (Route, bool) {
 		return Route{}, false
 	}
 
+	var orig core.OriginSettings
+	hostHdr := strings.TrimSpace(p.hostHeaderEd.Text())
+	if p.noTLSVerifyOn || hostHdr != "" {
+		orig.NoTLSVerify = p.noTLSVerifyOn
+		orig.HTTPHostHeader = hostHdr
+	}
+
+	target := "localhost:" + port
+	if p.noTLSVerifyOn {
+		target = "https://localhost:" + port
+	}
+
 	return Route{Route: core.Route{
 		Hostname: hostname,
-		Target:   "localhost:" + port,
+		Target:   target,
+		Origin:   orig,
 		Status:   statusStarting,
 		ZoneID:   p.currentZoneID(),
 	}}, true
@@ -1634,6 +1718,8 @@ func (p *Panel) renderView(gtx layout.Context, v view) layout.Dimensions {
 		return p.addRouteView(gtx)
 	case viewConfirmDelete:
 		return p.confirmDeleteView(gtx)
+	case viewLogs:
+		return p.logsView(gtx)
 	default:
 		return p.mainView(gtx)
 	}

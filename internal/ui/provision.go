@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -87,6 +88,28 @@ func (p *Panel) ensureTunnel() {
 		}
 
 		sup := supervisorFor(binPath)
+		sup.OnStatus(func(st supervisor.Status) {
+			p.dispatch(func() {
+				if p.tunnelGen != gen {
+					return
+				}
+				switch st.State {
+				case supervisor.StateConnected:
+					p.setStatus(fmt.Sprintf("Connected (%d conn)", st.Connections), colSuccess)
+					notify("QuickFlare Connected", fmt.Sprintf("Tunnel active with %d connection(s)", st.Connections))
+				case supervisor.StateReconnecting:
+					p.setStatus("Reconnecting...", colWarning)
+					notify("QuickFlare Disconnected", "Tunnel lost connection, attempting to reconnect...")
+				case supervisor.StateFailed:
+					errStr := "unknown error"
+					if st.Err != nil {
+						errStr = st.Err.Error()
+					}
+					p.setStatus("Tunnel failed: "+errStr, colError)
+					notify("QuickFlare Error", "Tunnel encountered an error: "+errStr)
+				}
+			})
+		})
 		if err := sup.Start(context.Background(), token); err != nil {
 			if ctx.Err() == nil {
 				p.dispatch(func() {
@@ -120,6 +143,11 @@ func (p *Panel) ensureTunnel() {
 
 // provisionRoute publishes one route, off the Gio loop.
 func (p *Panel) provisionRoute(hostname, target string) {
+	p.provisionRouteWithOrigin(hostname, target, core.OriginSettings{})
+}
+
+// provisionRouteWithOrigin publishes one route with optional origin settings, off the Gio loop.
+func (p *Panel) provisionRouteWithOrigin(hostname, target string, origin core.OriginSettings) {
 	client := p.cf
 	if client == nil {
 		p.setRouteStatus(hostname, statusError, "not connected to Cloudflare")
@@ -145,7 +173,12 @@ func (p *Panel) provisionRoute(hostname, target string) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		err := core.Publish(ctx, client, zoneID, tunnelID, hostname, target)
+		var origSettings *core.OriginSettings
+		if !origin.IsZero() {
+			origSettings = &origin
+		}
+
+		err := core.PublishWithOrigin(ctx, client, zoneID, tunnelID, hostname, target, origSettings)
 		p.dispatch(func() {
 			if err != nil {
 				p.setRouteStatus(hostname, statusError, err.Error())

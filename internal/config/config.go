@@ -22,10 +22,19 @@ import (
 // DNS records and the tunnel's ingress list - and a route can be removed from
 // the dashboard, or from another machine, without this file hearing about it.
 // Everything here is therefore re-checked on launch rather than trusted.
+// StoredOriginSettings holds serialized origin proxy flags.
+type StoredOriginSettings struct {
+	NoTLSVerify      bool   `json:"no_tls_verify,omitempty"`
+	HTTPHostHeader   string `json:"http_host_header,omitempty"`
+	OriginServerName string `json:"origin_server_name,omitempty"`
+	Http2Origin      bool   `json:"http2_origin,omitempty"`
+}
+
 type StoredRoute struct {
-	Hostname string `json:"hostname"`
-	Target   string `json:"target"`
-	ZoneID   string `json:"zone_id"`
+	Hostname string               `json:"hostname"`
+	Target   string               `json:"target"`
+	ZoneID   string               `json:"zone_id"`
+	Origin   StoredOriginSettings `json:"origin,omitempty"`
 }
 
 // Config is what survives a restart.
