@@ -5,3 +5,7 @@
 *.ico binary
 *.syso binary
 *.msi binary
+
+# Exclude test harness, Dockerfile, and unit tests from GitHub language statistics
+test/** linguist-detectable=false
+*_test.go linguist-detectable=false
