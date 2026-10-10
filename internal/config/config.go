@@ -37,6 +37,14 @@ type StoredRoute struct {
 	Origin   StoredOriginSettings `json:"origin,omitempty"`
 }
 
+// StoredDeletionJob records a pending deprovision request on Cloudflare.
+type StoredDeletionJob struct {
+	Hostname  string    `json:"hostname"`
+	ZoneID    string    `json:"zone_id"`
+	TunnelID  string    `json:"tunnel_id"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 // Config is what survives a restart.
 type Config struct {
 	// APIToken is the decrypted token, in memory only. It is deliberately
@@ -62,6 +70,9 @@ type Config struct {
 	// RestoreLastState restores the last route state on launch when true.
 	// When false (default), routes always default to OFF on launch.
 	RestoreLastState bool `json:"restore_last_state,omitempty"`
+
+	// PendingDeletions holds deletion jobs queued for Cloudflare deprovisioning.
+	PendingDeletions []StoredDeletionJob `json:"pending_deletions,omitempty"`
 }
 
 // SecretsAreEncrypted reports whether the stored token gets real OS-backed

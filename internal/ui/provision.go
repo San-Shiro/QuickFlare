@@ -3,9 +3,9 @@ package ui
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
+	"github.com/San-Shiro/QuickFlare/internal/config"
 	"github.com/San-Shiro/QuickFlare/internal/core"
 	"github.com/San-Shiro/QuickFlare/internal/supervisor"
 )
@@ -204,31 +204,24 @@ func supervisorFor(binPath string) *supervisor.Tunnel {
 	return supervisor.NewTunnel(binPath)
 }
 
-// deprovisionRoute tears a route down, off the Gio loop, and reports whatever
-// core could not clean up.
+// deprovisionRoute tears a route down via the sequential deletion queue.
+// Retained for callers or tests that construct a Route directly.
 func (p *Panel) deprovisionRoute(r Route) {
-	client := p.cf
-	if client == nil {
-		p.setStatus("Not connected - removed locally only", colWarning)
-		return
+	p.deleteMu.Lock()
+	p.deleteQueue = append(p.deleteQueue, config.StoredDeletionJob{
+		Hostname:  r.Hostname,
+		ZoneID:    r.ZoneID,
+		TunnelID:  p.tunnelID,
+		CreatedAt: time.Now(),
+	})
+	qLen := len(p.deleteQueue)
+	p.deleteMu.Unlock()
+
+	p.saveConfig()
+	if qLen > 1 {
+		p.setStatus(fmt.Sprintf("Queued %s for removal (%d in queue)", shortHost(r.Hostname), qLen), colWarning)
+	} else {
+		p.setStatus("Removing "+r.Hostname+"...", colWarning)
 	}
-
-	hostname, zoneID, tunnelID := r.Hostname, r.ZoneID, p.tunnelID
-
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-
-		problems := core.Unpublish(ctx, client, zoneID, tunnelID, hostname)
-
-		p.dispatch(func() {
-			if len(problems) == 0 {
-				p.setStatus("Removed "+hostname, colSuccess)
-				return
-			}
-			// Naming what survived matters: these are account-level leftovers
-			// the user may need to clear by hand.
-			p.setStatus("Removed "+hostname+" - leftovers: "+strings.Join(problems, "; "), colWarning)
-		})
-	}()
+	p.signalDeleteWorker()
 }

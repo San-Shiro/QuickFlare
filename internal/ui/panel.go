@@ -243,6 +243,13 @@ type Panel struct {
 	deleteBackdrop  widget.Clickable
 	deleteFadeStart time.Time
 
+	// Deletion queue coordinator
+	deleteMu    sync.Mutex
+	deleteQueue []config.StoredDeletionJob
+	deleteWake  chan struct{}
+	deleteStop  chan struct{}
+	deleteWG    sync.WaitGroup
+
 	// View transitions & animations
 	trans        viewTransition
 	winFadeStart time.Time
@@ -349,6 +356,8 @@ func NewPanel() *Panel {
 		post:       make(chan func(), 32),
 		view:       viewOnboarding,
 		statusTone: colTextDisabled,
+		deleteWake: make(chan struct{}, 1),
+		deleteStop: make(chan struct{}),
 	}
 	for _, ed := range []*widget.Editor{&p.hostEd, &p.portEd, &p.tokenEd, &p.hostHeaderEd, &p.logFilterEd} {
 		ed.SingleLine = true
@@ -378,6 +387,8 @@ func NewPanel() *Panel {
 
 	log.Printf("[panel] NewPanel: restoring configuration...")
 	p.restore()
+	p.deleteWG.Add(1)
+	go p.runDeleteWorker()
 	log.Printf("[panel] NewPanel completed successfully")
 	return p
 }
@@ -558,6 +569,13 @@ func (p *Panel) restore() {
 			Status:   statusIdle,
 			Detail:   detail,
 		}})
+	}
+
+	if len(cfg.PendingDeletions) > 0 {
+		p.deleteMu.Lock()
+		p.deleteQueue = append(p.deleteQueue, cfg.PendingDeletions...)
+		p.deleteMu.Unlock()
+		p.signalDeleteWorker()
 	}
 
 	if cfg.APIToken == "" {
@@ -1366,12 +1384,22 @@ func (p *Panel) pickZone(opts []zoneOption) int {
 // the behaviour this replaced.
 func (p *Panel) saveConfig() {
 	p.savedDomain = p.currentDomain()
+
+	p.deleteMu.Lock()
+	var pending []config.StoredDeletionJob
+	if len(p.deleteQueue) > 0 {
+		pending = make([]config.StoredDeletionJob, len(p.deleteQueue))
+		copy(pending, p.deleteQueue)
+	}
+	p.deleteMu.Unlock()
+
 	cfg := &config.Config{
 		APIToken:         p.settings.APIToken,
 		Domain:           p.savedDomain,
 		Routes:           p.storedRoutes(),
 		RoutesDisabled:   p.disabled,
 		RestoreLastState: p.restoreLastState,
+		PendingDeletions: pending,
 	}
 	if err := cfg.Save(); err != nil {
 		dbg("config save failed: %v", err)
@@ -1433,11 +1461,24 @@ func (p *Panel) buildRoute() (Route, bool) {
 	}}, true
 }
 
+// signalDeleteWorker wakes the deletion worker loop non-blockingly.
+func (p *Panel) signalDeleteWorker() {
+	if p.deleteWake == nil {
+		return
+	}
+	select {
+	case p.deleteWake <- struct{}{}:
+	default:
+	}
+}
+
 // deleteRoute tears the route down on Cloudflare and drops it from the list.
 //
 // The row goes immediately rather than waiting on the API: teardown is
 // best-effort and reports leftovers in the status bar, and a row still
 // sitting there after the user confirmed reads as the click not working.
+// Deletions are enqueued sequentially into deleteQueue so multiple rapid deletes
+// are never lost, skipped, or conflicting on Cloudflare.
 func (p *Panel) deleteRoute(hostname string) {
 	for i := range p.routes {
 		if p.routes[i].Hostname != hostname {
@@ -1445,10 +1486,126 @@ func (p *Panel) deleteRoute(hostname string) {
 		}
 		r := p.routes[i]
 		p.routes = append(p.routes[:i], p.routes[i+1:]...)
-		p.setStatus("Removing "+hostname+"...", colWarning)
+
+		p.deleteMu.Lock()
+		p.deleteQueue = append(p.deleteQueue, config.StoredDeletionJob{
+			Hostname:  r.Hostname,
+			ZoneID:    r.ZoneID,
+			TunnelID:  p.tunnelID,
+			CreatedAt: time.Now(),
+		})
+		qLen := len(p.deleteQueue)
+		p.deleteMu.Unlock()
+
 		p.saveConfig()
-		p.deprovisionRoute(r)
+		if qLen > 1 {
+			p.setStatus(fmt.Sprintf("Queued %s for removal (%d in queue)", shortHost(hostname), qLen), colWarning)
+		} else {
+			p.setStatus("Removing "+hostname+"...", colWarning)
+		}
+		p.signalDeleteWorker()
 		return
+	}
+}
+
+// runDeleteWorker sequentially processes pending route deletions FIFO.
+func (p *Panel) runDeleteWorker() {
+	defer p.deleteWG.Done()
+
+	for {
+		select {
+		case <-p.deleteStop:
+			return
+		case <-p.deleteWake:
+		}
+
+		for {
+			select {
+			case <-p.deleteStop:
+				return
+			default:
+			}
+
+			p.deleteMu.Lock()
+			if len(p.deleteQueue) == 0 {
+				p.deleteMu.Unlock()
+				break
+			}
+			job := p.deleteQueue[0]
+			qCount := len(p.deleteQueue)
+			p.deleteMu.Unlock()
+
+			// Update status for active deletion
+			p.dispatch(func() {
+				if qCount > 1 {
+					p.setStatus(fmt.Sprintf("Removing %s... (%d queued)", shortHost(job.Hostname), qCount-1), colWarning)
+				} else {
+					p.setStatus("Removing "+job.Hostname+"...", colWarning)
+				}
+			})
+
+			// If verification is currently in flight, wait briefly for client to be established
+			client := p.cf
+			if client == nil && p.verifying {
+				for i := 0; i < 30 && p.verifying; i++ {
+					select {
+					case <-p.deleteStop:
+						return
+					case <-time.After(100 * time.Millisecond):
+					}
+					client = p.cf
+					if client != nil {
+						break
+					}
+				}
+			}
+
+			tunnelID := job.TunnelID
+			if tunnelID == "" {
+				tunnelID = p.tunnelID
+			}
+
+			var problems []string
+			if client != nil {
+				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+				go func() {
+					select {
+					case <-p.deleteStop:
+						cancel()
+					case <-ctx.Done():
+					}
+				}()
+				problems = core.Unpublish(ctx, client, job.ZoneID, tunnelID, job.Hostname)
+				cancel()
+			} else {
+				problems = []string{"not connected - removed locally only"}
+			}
+
+			// Pop the finished job from the queue and persist
+			p.deleteMu.Lock()
+			if len(p.deleteQueue) > 0 && p.deleteQueue[0].Hostname == job.Hostname {
+				p.deleteQueue = p.deleteQueue[1:]
+			}
+			remaining := len(p.deleteQueue)
+			nextHost := ""
+			if remaining > 0 {
+				nextHost = p.deleteQueue[0].Hostname
+			}
+			p.deleteMu.Unlock()
+
+			p.dispatch(func() {
+				p.saveConfig()
+				if remaining > 0 {
+					p.setStatus(fmt.Sprintf("Removed %s. Removing %s... (%d queued)", shortHost(job.Hostname), shortHost(nextHost), remaining-1), colWarning)
+				} else {
+					if len(problems) == 0 {
+						p.setStatus("Removed "+job.Hostname, colSuccess)
+					} else {
+						p.setStatus("Removed "+job.Hostname+" - leftovers: "+strings.Join(problems, "; "), colWarning)
+					}
+				}
+			})
+		}
 	}
 }
 
@@ -1594,6 +1751,11 @@ func (p *Panel) addCloser(f func()) {
 // here.
 func (p *Panel) Shutdown() {
 	p.shutdownOnce.Do(func() {
+		if p.deleteStop != nil {
+			close(p.deleteStop)
+			p.deleteWG.Wait()
+		}
+
 		p.closersMu.Lock()
 		closers := p.closers
 		p.closers = nil
